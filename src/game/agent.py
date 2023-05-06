@@ -49,8 +49,16 @@ class Agent:
 
         # zapobiega poruszaniu się miedzy gridem
         if self.pos_x % self.tile_size != 0 and dx == 0:
+            if self.pos_x % self.tile_size== 1:
+                self.pos_x -= 1
+            elif self.pos_x % self.tile_size == 3:
+                self.pos_x += 1
             return True
         if self.pos_y % self.tile_size != 0 and dy == 0:
+            if self.pos_y % self.tile_size == 1:
+                self.pos_y -= 1
+            elif self.pos_y % self.tile_size== 3:
+                self.pos_y += 1
             return True
 
         if action == Action.UP or action == Action.LEFT:
@@ -72,6 +80,7 @@ class Agent:
                  round(self.pos_x / self.tile_size),
                  round(self.pos_y / self.tile_size),
                  map, self, self.speed)
+        self.bomb_limit -= 1
         return b
 
     def check_death(self, explosions: list[Explosion]):
