@@ -18,6 +18,11 @@ Run using menu file:
 ```
 python menu.py 
 ```
+
+Run Q-learning:
+```
+python qlearning.py 
+```
  
 
 ## Sprite 
