@@ -42,11 +42,6 @@ class Menu:
 
     def __init__(self):
         return
-        # self.player = Player()
-        # self.enemy1 = Enemy()
-        # self.enemy2 = Enemy()
-        # self.enemy3 = Enemy()
-        # self.map = None
 
     def change_path(self, *args):
         self.show_path = args[1]
