@@ -65,43 +65,45 @@ class Game:
         self.power_ups: list[PowerUp] = []
         self.game_ended = False
         self.grid = None
-        self.player = Player(speed, 1, 1, 4)
         self.show_path = show_path
         self.scale = scale
         self.speed = speed
+
+        self.player = Player(1, 1, self.speed)
 
         self.init_players(player_alg, en1_alg, en2_alg, en3_alg)
 
     def init_players(self, player_alg, en1_alg, en2_alg, en3_alg):
         if en1_alg is not Algorithm.NONE:
-            en1 = Enemy(11, 11, en1_alg, self.speed)
-            en1.load_animations('1', self.scale)
+            en1 = Enemy(len(GRID_BASE[0]) - 2, len(GRID_BASE) - 2, en1_alg, self.speed)
+            en1.load_animations('images/enemy/e1', self.scale)
             self.enemy_list.append(en1)
             self.ene_blocks.append(en1)
 
         if en2_alg is not Algorithm.NONE:
-            en2 = Enemy(1, 11, en2_alg, self.speed)
-            en2.load_animations('2', self.scale)
+            en2 = Enemy(1, len(GRID_BASE) - 2, en2_alg, self.speed)
+            en2.load_animations('images/enemy/e2', self.scale)
             self.enemy_list.append(en2)
             self.ene_blocks.append(en2)
 
         if en3_alg is not Algorithm.NONE:
-            en3 = Enemy(11, 1, en3_alg, self.speed)
-            en3.load_animations('3', self.scale)
+            en3 = Enemy(len(GRID_BASE[0]) - 2, 1, en3_alg, self.speed)
+            en3.load_animations('images/enemy/e3', self.scale)
             self.enemy_list.append(en3)
             self.ene_blocks.append(en3)
 
         if player_alg is Algorithm.PLAYER:
+            self.player = Player(1, 1, self.speed)
             self.player.load_animations('images/hero/p', self.scale)
             self.ene_blocks.append(self.player)
         elif player_alg is not Algorithm.NONE:
             en0 = Enemy(1, 1, player_alg, self.speed)
-            en0.load_animations('', self.scale)
+            en0.load_animations('images/hero/p', self.scale)
             self.enemy_list.append(en0)
             self.ene_blocks.append(en0)
-            self.player.life = False
+            self.player.alive = False
         else:
-            self.player.life = False
+            self.player.alive = False
 
     def init_sprites(self):
         self.grass_img = pygame.image.load('images/terrain/grass.png')
@@ -148,27 +150,27 @@ class Game:
         for i in range(len(self.grid)):
             for j in range(len(self.grid[i])):
                 surface.blit(self.terrain_images[self.grid[i][j]],
-                                  (i * self.scale, j * self.scale, self.scale, self.scale))
+                             (i * self.scale, j * self.scale, self.scale, self.scale))
 
         for pu in self.power_ups:
             surface.blit(self.power_ups_images[pu.type.value],
-                              (pu.pos_x * self.scale, pu.pos_y * self.scale, self.scale, self.scale))
+                         (pu.pos_x * self.scale, pu.pos_y * self.scale, self.scale, self.scale))
 
         for x in self.bombs:
             surface.blit(self.bomb_images[x.frame],
-                              (x.pos_x * self.scale, x.pos_y * self.scale, self.scale, self.scale))
+                         (x.pos_x * self.scale, x.pos_y * self.scale, self.scale, self.scale))
 
         for y in self.explosions:
             for x in y.sectors:
                 surface.blit(self.explosion_images[y.frame],
-                                  (x[0] * self.scale, x[1] * self.scale, self.scale, self.scale))
-        if self.player.life:
+                             (x[0] * self.scale, x[1] * self.scale, self.scale, self.scale))
+        if self.player.alive:
             surface.blit(self.player.animation[self.player.direction][self.player.frame], (
-                self.player.pos_x * (self.scale / 4), self.player.pos_y * (self.scale / 4), self.scale, self.scale))
+                self.player.pos_x * (self.scale), self.player.pos_y * (self.scale), self.scale, self.scale))
         for en in self.enemy_list:
-            if en.life:
+            if en.alive:
                 surface.blit(en.animation[en.direction][en.frame],
-                                  (en.pos_x * (self.scale / 4), en.pos_y * (self.scale / 4), self.scale, self.scale))
+                             (en.pos_x * (self.scale), en.pos_y * (self.scale), self.scale, self.scale))
                 if self.show_path:
                     if en.algorithm == Algorithm.DFS:
                         for sek in en.path:
@@ -195,13 +197,13 @@ class Game:
 
         running = True
         game_ended = False
+        self.draw(surface)
         while running:
             dt = clock.tick(int(15 * self.speed))
-            for en in self.enemy_list:
-                en.make_move(self.grid, self.bombs, self.explosions, self.ene_blocks)
 
+            action = Action.NO_ACTION
             # print(self.player.state)
-            if self.player.life:
+            if self.player.alive:
                 keys = pygame.key.get_pressed()
                 action = Action.NO_ACTION
                 if keys[pygame.K_DOWN]:
@@ -219,7 +221,7 @@ class Game:
             # print(pd.DataFrame(self.grid))
             # print(self.get_state())
             # print(self.get_9grid_state())
-            # print(self.get_9crossgrid_state())
+            state = self.get_9crossgrid_state()
             # print(self.get_5grid_state())
 
             if not game_ended:
@@ -232,25 +234,18 @@ class Game:
                     if e.key == pygame.K_ESCAPE:
                         running = False
                     elif e.key == pygame.K_SPACE:
-                        self.move_player(Action.PLANT_BOMB)
+                        action = Action.PLANT_BOMB
 
+            self.player.move(action, self.grid, self.bombs, self.ene_blocks, self.power_ups)
+            for en in self.enemy_list:
+                en.choose_move(self.grid, self.bombs, self.explosions, self.ene_blocks, state)
             self.update_bombs(dt)
+            self.draw(surface)
 
         self.explosions.clear()
         self.enemy_list.clear()
         self.ene_blocks.clear()
         self.power_ups.clear()
-
-    # def display(self):
-    def move_player(self, action):
-        if action == Action.PLANT_BOMB:
-            if self.player.bomb_limit > 0 and self.player.life:
-                temp_bomb = self.player.plant_bomb(self.grid)
-                self.bombs.append(temp_bomb)
-                self.grid[temp_bomb.pos_x][temp_bomb.pos_y] = 3
-                self.player.bomb_limit -= 1
-        else:
-            self.player.move(action, self.grid, self.ene_blocks, self.power_ups)
 
     def update_bombs(self, dt):
         sectors_cleared_by_player = None
@@ -282,11 +277,11 @@ class Game:
         return player_killed_enemy, sectors_cleared_by_player
 
     def check_end_game(self):
-        if not self.player.life:
+        if not self.player.alive:
             return True
 
         for en in self.enemy_list:
-            if en.life:
+            if en.alive:
                 return False
 
         return True
@@ -297,9 +292,9 @@ class Game:
             for j in range(1, len(self.grid[i]) - 1):
                 if self.grid[i][j] != 0:
                     continue
-                elif (i < 4 or i > len(self.grid) - 5) and (j < 4 or j > len(self.grid[i]) - 5):
+                elif (i < 3 or i > len(self.grid) - 4) and (j < 3 or j > len(self.grid[i]) - 4):
                     continue
-                if True:  # random.randint(0, 9) < 4:
+                if random.randint(0, 9) < 6:
                     self.grid[i][j] = 2
 
         self.grid = self.grid
@@ -334,16 +329,17 @@ class Game:
 
     def get_9crossgrid_state(self):
         state = 'g'
-        x, y = int(self.player.pos_x / 4), int(self.player.pos_y / 4)
-        tiles5 = [[x, y], [x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1], [x + 2, y], [x - 2, y], [x, y + 2],
+        x, y = self.player.pos_x, self.player.pos_y
+        tiles9 = [[x, y], [x + 1, y], [x + 2, y], [x - 1, y], [x - 2, y], [x, y + 1], [x, y + 2], [x, y - 1],
                   [x, y - 2]]
-        for tile in tiles5:
+
+        for tile in tiles9:
             if tile[0] < 0 or tile[0] >= len(self.grid) or tile[1] < 0 or tile[1] >= len(self.grid):
                 state += '1'
             else:
                 state += str(self.grid[tile[0]][tile[1]])
 
-        for tile in tiles5:
+        for tile in tiles9:
             bombs_state = 'b00'
             for bomb in self.bombs:
                 if bomb.pos_x == tile[0] and bomb.pos_y == tile[1]:
@@ -356,13 +352,13 @@ class Game:
         x_prefix = 0
         dist_x = 0
         for enemy in self.enemy_list:
-            dist = abs(enemy.pos_y - y * 4) + abs(enemy.pos_x - x * 4)
+            dist = abs(enemy.pos_y - y) + abs(enemy.pos_x - x)
             if dist < enemy_dist:
                 enemy_dist = dist
-                y_prefix = 0 if enemy.pos_y - y * 4 >= 0 else 1
-                x_prefix = 0 if enemy.pos_x - x * 4 >= 0 else 1
-                dist_y = abs(enemy.pos_y - y * 4)
-                dist_x = abs(enemy.pos_x - x * 4)
+                y_prefix = 0 if enemy.pos_y - y >= 0 else 1
+                x_prefix = 0 if enemy.pos_x - x >= 0 else 1
+                dist_y = abs(enemy.pos_y - y)
+                dist_x = abs(enemy.pos_x - x)
         enemy_state = ''.join(["ex", str(x_prefix), str(dist_x).zfill(2),
                                "ey", str(y_prefix), str(dist_y).zfill(2)])
         state += enemy_state
