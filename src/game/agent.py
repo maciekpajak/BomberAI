@@ -10,25 +10,22 @@ from src.game.enums.tile import Tile
 
 
 class Agent:
-    life = True
-    pos_x = None
-    pos_y = None
-    direction = 0
-    frame = 0
-    animation = []
-    bomb_range = 2
-    bomb_limit = 1
 
-    def __init__(self, x: int, y: int, tile_size: int, speed: float):
-        self.tile_size = tile_size
-        self.pos_x = x * self.tile_size
-        self.pos_y = y * self.tile_size
+    def __init__(self, x: int, y: int, speed: float):
+        self.alive = True
+        self.bomb_range = 2
+        self.bomb_limit = 1
+        self.pos_x = x
+        self.pos_y = y
         self.speed = speed
         self.direction = 2
         self.frame = 0
         self.animation = []
 
-    def move(self, action: Action, grid, enemies, power_ups) -> bool:
+    def choose_move(self, grid, bombs, explosions, enemies, state):
+        raise NotImplementedError
+
+    def move(self, action: Action, grid, bombs, enemies, power_ups) -> bool:
         dx, dy = 0, 0
         if action == Action.UP:
             dx, dy = 0, -1
@@ -44,37 +41,14 @@ class Agent:
             self.direction = action.value
         elif action == Action.NO_ACTION:
             dx, dy = 0, 0
+        elif action == Action.PLANT_BOMB and self.bomb_limit > 0:
+            bomb = self.plant_bomb(grid)
+            bombs.append(bomb)
+            grid[bomb.pos_x][bomb.pos_y] = 3
 
-        # for x in enemies:
-        #     if x == self:
-        #         continue
-        #     elif not x.life:
-        #         continue
-        #     else:
-        #         # continue
-        #         map[int(x.pos_x / Player.TILE_SIZE)][int(x.pos_y / Player.TILE_SIZE)] = 2
 
-        # zapobiega poruszaniu się miedzy gridem
-        if self.pos_x % self.tile_size != 0 and dx == 0:
-            if self.pos_x % self.tile_size== 1:
-                self.pos_x -= 1
-            elif self.pos_x % self.tile_size == 3:
-                self.pos_x += 1
-            return True
-        if self.pos_y % self.tile_size != 0 and dy == 0:
-            if self.pos_y % self.tile_size == 1:
-                self.pos_y -= 1
-            elif self.pos_y % self.tile_size== 3:
-                self.pos_y += 1
-            return True
-
-        if action == Action.UP or action == Action.LEFT:
-            grid_y = math.ceil(self.pos_y / self.tile_size)
-            grid_x = math.ceil(self.pos_x / self.tile_size)
-        else:
-            grid_y = math.floor(self.pos_y / self.tile_size)
-            grid_x = math.floor(self.pos_x / self.tile_size)
-        if grid[grid_x + dx][grid_y + dy] == Tile.SOLID.value or grid[grid_x + dx][grid_y + dy] == Tile.BOX.value:
+        step = grid[self.pos_x + dx][self.pos_y + dy]
+        if step == Tile.SOLID.value or step == Tile.BOX.value or step == 3:
             return False
         else:
             self.pos_x += dx
@@ -82,19 +56,16 @@ class Agent:
 
         return True
 
-    def plant_bomb(self, map):
-        b = Bomb(self.bomb_range,
-                 round(self.pos_x / self.tile_size),
-                 round(self.pos_y / self.tile_size),
-                 map, self, self.speed)
+    def plant_bomb(self, grid):
+        b = Bomb(self.bomb_range,self.pos_x,self.pos_y,grid, self, self.speed)
         self.bomb_limit -= 1
         return b
 
     def check_death(self, explosions: list[Explosion]):
         for explosion in explosions:
             for sector in explosion.sectors:
-                if int(self.pos_x / self.tile_size) == sector[0] and int(self.pos_y / self.tile_size) == sector[1]:
-                    self.life = False
+                if self.pos_x == sector[0] and self.pos_y == sector[1]:
+                    self.alive = False
                     return explosion.bomber
 
     def consume_power_up(self, power_up, power_ups):
