@@ -24,17 +24,24 @@ class Agent:
         self.pos_x = x * self.tile_size
         self.pos_y = y * self.tile_size
         self.speed = speed
+        self.direction = 2
+        self.frame = 0
+        self.animation = []
 
     def move(self, action: Action, grid, enemies, power_ups) -> bool:
         dx, dy = 0, 0
         if action == Action.UP:
             dx, dy = 0, -1
+            self.direction = action.value
         elif action == Action.DOWN:
             dx, dy = 0, 1
+            self.direction = action.value
         elif action == Action.LEFT:
             dx, dy = -1, 0
+            self.direction = action.value
         elif action == Action.RIGHT:
             dx, dy = 1, 0
+            self.direction = action.value
         elif action == Action.NO_ACTION:
             dx, dy = 0, 0
 
@@ -154,7 +161,7 @@ class Agent:
         left.append(l2)
         left.append(l3)
 
-        self.animation.append(front)
-        self.animation.append(right)
         self.animation.append(back)
+        self.animation.append(right)
+        self.animation.append(front)
         self.animation.append(left)
