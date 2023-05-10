@@ -1,6 +1,4 @@
 import numpy as np
-import pandas
-import pandas as pd
 import pygame
 import sys
 import random
@@ -13,15 +11,6 @@ from src.game.enemy import Enemy
 from src.game.enums.algorithm import Algorithm
 
 BACKGROUND_COLOR = (107, 142, 35)
-
-# font = None
-#
-# player = None
-# enemy_list = []
-# ene_blocks = []
-# bombs = []
-# explosions = []
-# power_ups = []
 
 GRID_BASE = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
              [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -166,11 +155,11 @@ class Game:
                              (x[0] * self.scale, x[1] * self.scale, self.scale, self.scale))
         if self.player.alive:
             surface.blit(self.player.animation[self.player.direction][self.player.frame], (
-                self.player.pos_x * (self.scale), self.player.pos_y * (self.scale), self.scale, self.scale))
+                self.player.pos_x * self.scale, self.player.pos_y * self.scale, self.scale, self.scale))
         for en in self.enemy_list:
             if en.alive:
                 surface.blit(en.animation[en.direction][en.frame],
-                             (en.pos_x * (self.scale), en.pos_y * (self.scale), self.scale, self.scale))
+                             (en.pos_x * self.scale, en.pos_y * self.scale, self.scale, self.scale))
                 if self.show_path:
                     if en.algorithm == Algorithm.DFS:
                         for sek in en.path:
@@ -189,7 +178,6 @@ class Game:
         pygame.display.update()
 
     def run(self, surface):
-        # self.grid = [row[:] for row in GRID_BASE]
         self.generate_map(GRID_BASE)
         # power_ups.append(PowerUp(1, 2, PowerUpType.BOMB))
         # power_ups.append(PowerUp(2, 1, PowerUpType.FIRE))
@@ -205,7 +193,6 @@ class Game:
             # print(self.player.state)
             if self.player.alive:
                 keys = pygame.key.get_pressed()
-                action = Action.NO_ACTION
                 if keys[pygame.K_DOWN]:
                     action = Action.DOWN
                 elif keys[pygame.K_RIGHT]:
@@ -214,10 +201,6 @@ class Game:
                     action = Action.UP
                 elif keys[pygame.K_LEFT]:
                     action = Action.LEFT
-                else:
-                    action = Action.NO_ACTION
-                self.move_player(action)
-            self.draw(surface)
             # print(pd.DataFrame(self.grid))
             # print(self.get_state())
             # print(self.get_9grid_state())
@@ -268,7 +251,6 @@ class Game:
         for en in self.enemy_list:
             bomber = en.check_death(self.explosions)
             if bomber == self.player:
-                print("Player killed enemy")
                 player_killed_enemy = True
         for e in self.explosions:
             e.update(dt)
