@@ -14,56 +14,44 @@ from src.game.node import Node
 from src.game.enums.algorithm import Algorithm
 
 
-class Enemy:
+class TileType(Enum):
+    SAFE = 0
+    UNSAFE = 1
+    DESTROYABLE = 2
+    UNREACHABLE = 3
 
-    dire = [[1, 0, 1], [0, 1, 0], [-1, 0, 3], [0, -1, 2]]
 
-    TILE_SIZE = 4
+class Enemy(Agent):
+    dire = [[1, 0, Action.RIGHT], [0, 1, Action.DOWN], [-1, 0, Action.LEFT], [0, -1, Action.UP]]
 
     def __init__(self, x, y, alg, speed):
-        self.speed = speed
-        self.life = True
+        super().__init__(x, y, speed)
         self.path = []
         self.movement_path = []
-        self.pos_x = x * Enemy.TILE_SIZE
-        self.pos_y = y * Enemy.TILE_SIZE
-        self.direction = 0
-        self.frame = 0
-        self.animation = []
-        self.range = 2
-        self.bomb_limit = 1
-        self.plant = False
         self.algorithm = alg
         if self.algorithm == Algorithm.Q:
             qtable_path = (Path('.') / 'src' / 'qtable' / 'qtable.csv').resolve()
             self.qtable = pd.read_csv(qtable_path, index_col='State',)
             self.qtable = self.qtable.transpose().to_dict(orient='list')
 
-    def move(self, map, bombs, explosions, enemy):
+    def choose_move(self, grid, bombs, explosions, enemies, state):
 
-        if self.direction == 0:
-            self.pos_y += 1
-        elif self.direction == 1:
-            self.pos_x += 1
-        elif self.direction == 2:
-            self.pos_y -= 1
-        elif self.direction == 3:
-            self.pos_x -= 1
+        if not self.alive:
+            return
+        if not self.movement_path:
+            if self.algorithm == Algorithm.DFS:
+                self.dfs(self.create_grid(grid, bombs, explosions, enemies))
+            elif self.algorithm == Algorithm.DIJKSTRA:
+                raise NotImplementedError
+            elif self.algorithm == Algorithm.Q:
+                self.q_path(state)
+            else:
+                self.random_path(self.create_grid(grid, bombs, explosions, enemies))
 
-        if self.pos_x % Enemy.TILE_SIZE == 0 and self.pos_y % Enemy.TILE_SIZE == 0:
-            self.movement_path.pop(0)
-            self.path.pop(0)
-            if len(self.path) > 1:
-                grid = self.create_grid(map, bombs, explosions, enemy)
-                next = self.path[1]
-                if grid[next[0]][next[1]] > 1:
-                    self.movement_path.clear()
-                    self.path.clear()
-
-        if self.frame == 2:
-            self.frame = 0
-        else:
-            self.frame += 1
+        action = self.movement_path[0]
+        self.move(action, grid, bombs, enemies, None)
+        self.movement_path.pop(0)
+        self.path.pop(0)
 
     def random_path(self, grid):
         n = np.random.randint(5, 10)
@@ -104,272 +92,92 @@ class Enemy:
 
     def dfs(self, grid):
 
-        new_path = [[int(self.pos_x / Enemy.TILE_SIZE), int(self.pos_y / Enemy.TILE_SIZE)]]
+        new_path = [[self.pos_x, self.pos_y]]
         depth = 0
-        if self.bomb_limit == 0:
-            self.dfs_rec(grid, 0, new_path, depth)
-        else:
-            self.dfs_rec(grid, 2, new_path, depth)
-
+        self.dfs_rec(grid, new_path, depth)
         self.path = new_path
 
-    def dfs_rec(self, grid, end, path, depth):
+    def dfs_rec(self, grid, path, depth):
 
-        last = path[-1]
+        x_last, y_last = path[-1]
         if depth > 200:
+            self.movement_path.append(Action.NO_ACTION)
             return
-        if grid[last[0]][last[1]] == 0 and end == 0:
+        # if bomb planted and current tile is safe
+        if grid[x_last][y_last] == TileType.SAFE and self.bomb_limit == 0:  # path to safe place after planting bomb
+            self.movement_path.append(Action.NO_ACTION)
             return
-        elif end == 2:
-            if grid[last[0] + 1][last[1]] == end or grid[last[0] - 1][last[1]] == end \
-                    or grid[last[0]][last[1] + 1] == end \
-                    or grid[last[0]][last[1] - 1] == end:
-                if len(path) == 1 and end == 2:
-                    self.plant = True
+        # if any destroyable object around
+        if grid[x_last + 1][y_last + 0] == TileType.DESTROYABLE or grid[x_last + 0][
+            y_last + 1] == TileType.DESTROYABLE or grid[x_last - 1][y_last + 0] == TileType.DESTROYABLE or \
+                grid[x_last + 0][y_last - 1] == TileType.DESTROYABLE:
+            if self.bomb_limit != 0:
+                self.movement_path.append(Action.PLANT_BOMB)
                 return
 
-        grid[last[0]][last[1]] = 9
+        grid[x_last][y_last] = TileType.UNREACHABLE  # prevent return
 
         random.shuffle(self.dire)
 
-        # safe
-        if grid[last[0] + self.dire[0][0]][last[1] + self.dire[0][1]] == 0:
-            path.append([last[0] + self.dire[0][0], last[1] + self.dire[0][1]])
-            self.movement_path.append(self.dire[0][2])
-        elif grid[last[0] + self.dire[1][0]][last[1] + self.dire[1][1]] == 0:
-            path.append([last[0] + self.dire[1][0], last[1] + self.dire[1][1]])
-            self.movement_path.append(self.dire[1][2])
-        elif grid[last[0] + self.dire[2][0]][last[1] + self.dire[2][1]] == 0:
-            path.append([last[0] + self.dire[2][0], last[1] + self.dire[2][1]])
-            self.movement_path.append(self.dire[2][2])
-        elif grid[last[0] + self.dire[3][0]][last[1] + self.dire[3][1]] == 0:
-            path.append([last[0] + self.dire[3][0], last[1] + self.dire[3][1]])
-            self.movement_path.append(self.dire[3][2])
+        good_move_found = False
+        if not good_move_found:
+            for action_arr in self.dire:
+                if grid[x_last + action_arr[0]][y_last + action_arr[1]] == TileType.SAFE:
+                    path.append([x_last + action_arr[0], y_last + action_arr[1]])
+                    self.movement_path.append(action_arr[2])
+                    good_move_found = True
+                    break
 
-        # unsafe
-        elif grid[last[0] + self.dire[0][0]][last[1] + self.dire[0][1]] == 1:
-            path.append([last[0] + self.dire[0][0], last[1] + self.dire[0][1]])
-            self.movement_path.append(self.dire[0][2])
-        elif grid[last[0] + self.dire[1][0]][last[1] + self.dire[1][1]] == 1:
-            path.append([last[0] + self.dire[1][0], last[1] + self.dire[1][1]])
-            self.movement_path.append(self.dire[1][2])
-        elif grid[last[0] + self.dire[2][0]][last[1] + self.dire[2][1]] == 1:
-            path.append([last[0] + self.dire[2][0], last[1] + self.dire[2][1]])
-            self.movement_path.append(self.dire[2][2])
-        elif grid[last[0] + self.dire[3][0]][last[1] + self.dire[3][1]] == 1:
-            path.append([last[0] + self.dire[3][0], last[1] + self.dire[3][1]])
-            self.movement_path.append(self.dire[3][2])
-        else:
+        if not good_move_found:
+            for action_arr in self.dire:
+                if grid[x_last + action_arr[0]][y_last + action_arr[1]] == TileType.UNSAFE:
+                    path.append([x_last + action_arr[0], y_last + action_arr[1]])
+                    self.movement_path.append(action_arr[2])
+                    good_move_found = True
+                    break
+
+        if not good_move_found:
             if len(self.movement_path) > 0:
                 path.pop(0)
                 self.movement_path.pop(0)
-        depth += 1
-        self.dfs_rec(grid, end, path, depth)
 
-    def dijkstra(self, grid):
+        self.dfs_rec(grid, path, depth + 1)
 
-        end = 1
-        if self.bomb_limit == 0:
-            end = 0
+    def q_path(self, state):
+        if state not in self.qtable:
+            action = np.random.choice(list(Action), 1, p=[0.23, 0.23, 0.23, 0.23, 0.0, 0.08])[0]
+            print("[Q-Bot] I've never been here!")
+        else:
+            action = Action(np.argmax(self.qtable[state]))
+        self.movement_path.append(action)
+        self.path = [[self.pos_x, self.pos_y]]
 
-        visited = []
-        open_list = []
-        current = grid[int(self.pos_x / Enemy.TILE_SIZE)][int(self.pos_y / Enemy.TILE_SIZE)]
-        current.weight = current.base_weight
-        new_path = []
-        while True:
-            visited.append(current)
-            random.shuffle(self.dire)
-            if (current.value == end and end == 0) or\
-                    (end == 1 and (grid[current.x+1][current.y].value == 1 or grid[current.x-1][current.y].value == 1 or
-                grid[current.x][current.y+1].value == 1 or grid[current.x][current.y-1].value == 1)):
-                new_path.append([current.x, current.y])
-                while True:
-                    if current.parent is None:
-                        break
-                    current = current.parent
-                    new_path.append([current.x, current.y])
-                new_path.reverse()
-                for xd in range(len(new_path)):
-                    if new_path[xd] is not new_path[-1]:
-                        if new_path[xd][0] - new_path[xd+1][0] == -1:
-                            self.movement_path.append(1)
-                        elif new_path[xd][0] - new_path[xd + 1][0] == 1:
-                            self.movement_path.append(3)
-                        elif new_path[xd][1] - new_path[xd + 1][1] == -1:
-                            self.movement_path.append(0)
-                        elif new_path[xd][1] - new_path[xd + 1][1] == 1:
-                            self.movement_path.append(2)
-                if len(new_path) == 1 and end == 1:
-                    self.plant = True
-                self.path = new_path
-                return
-
-            for i in range(len(self.dire)):
-                if current.x + self.dire[i][0] < len(grid) and current.y + self.dire[i][1] < len(grid):
-                    if grid[current.x + self.dire[i][0]][current.y + self.dire[i][1]].reach \
-                            and grid[current.x + self.dire[i][0]][current.y + self.dire[i][1]] not in visited:
-                        if grid[current.x + self.dire[i][0]][current.y + self.dire[i][1]] in open_list:
-                            if grid[current.x + self.dire[i][0]][current.y + self.dire[i][1]].weight >\
-                                    grid[current.x][current.y].weight \
-                                    + grid[current.x + self.dire[i][0]][current.y + self.dire[i][1]].base_weight:
-                                grid[current.x + self.dire[i][0]][current.y + self.dire[i][1]].parent = current
-                                grid[current.x + self.dire[i][0]][current.y + self.dire[i][1]].weight = current.weight + grid[current.x + self.dire[i][0]][current.y + self.dire[i][1]].base_weight
-                                grid[current.x + self.dire[i][0]][current.y + self.dire[i][1]].direction = self.dire[i][2]
-
-                        else:
-                            grid[current.x + self.dire[i][0]][current.y + self.dire[i][1]].parent = current
-                            grid[current.x + self.dire[i][0]][current.y + self.dire[i][1]].weight =\
-                                current.weight + grid[current.x + self.dire[i][0]][current.y + self.dire[i][1]].base_weight
-                            grid[current.x + self.dire[i][0]][current.y + self.dire[i][1]].direction = self.dire[i][2]
-                            open_list.append(grid[current.x + self.dire[i][0]][current.y + self.dire[i][1]])
-
-            if len(open_list) == 0:
-                self.path = [[int(self.pos_x / Enemy.TILE_SIZE), int(self.pos_y / Enemy.TILE_SIZE)]]
-                return
-
-            next_node = open_list[0]
-            for n in open_list:
-                if n.weight < next_node.weight:
-                    next_node = n
-            open_list.remove(next_node)
-            current = next_node
-
-    def create_grid(self, map, bombs, explosions, enemys):
-        grid = np.zeros_like(map)
-
-        # 0 - safe
-        # 1 - unsafe
-        # 2 - destryable
-        # 3 - unreachable
+    def create_grid(self, grid, bombs, explosions, enemies):
+        tmp_grid = np.full_like(grid, fill_value=TileType.SAFE, dtype=TileType)
 
         for b in bombs:
-            b.get_range(map)
+            b.get_range(grid)
             for x in b.sectors:
-                grid[x[0]][x[1]] = 1
-            grid[b.pos_x][b.pos_y] = 3
+                tmp_grid[x[0]][x[1]] = TileType.UNSAFE
+            tmp_grid[b.pos_x][b.pos_y] = TileType.UNREACHABLE
 
         for e in explosions:
             for s in e.sectors:
-                grid[s[0]][s[1]] = 3
+                tmp_grid[s[0]][s[1]] = TileType.UNREACHABLE
 
-        for i in range(len(map)):
-            for j in range(len(map[i])):
-                if map[i][j] == 1:
-                    grid[i][j] = 3
-                elif map[i][j] == 2:
-                    grid[i][j] = 2
+        for i in range(len(grid)):
+            for j in range(len(grid[i])):
+                if grid[i][j] == Tile.SOLID.value:
+                    tmp_grid[i][j] = TileType.UNREACHABLE
+                elif grid[i][j] == Tile.BOX.value:
+                    tmp_grid[i][j] = TileType.DESTROYABLE
 
-        for x in enemys:
+        for x in enemies:
             if x == self:
                 continue
-            elif not x.life:
+            elif not x.alive:
                 continue
             else:
-                grid[int(x.pos_x / Enemy.TILE_SIZE)][int(x.pos_y / Enemy.TILE_SIZE)] = 2
+                tmp_grid[x.pos_x][x.pos_y] = TileType.DESTROYABLE
 
-        return grid
-
-    def create_grid_dijkstra(self, map, bombs, explosions, enemys):
-        grid = np.empty_like(map, dtype=Node)
-        # 0 - safe
-        # 1 - destroyable
-        # 2 - unreachable
-        # 3 - unsafe
-        for i in range(len(map)):
-            for j in range(len(map)):
-                if map[i][j] == 0:
-                    grid[i][j] = Node(i, j, True, 1, 0)
-                elif map[i][j] == 2:
-                    grid[i][j] = Node(i, j, False, 999, 1)
-                elif map[i][j] == 1:
-                    grid[i][j] = Node(i, j, False, 999, 2)
-                elif map[i][j] == 3:
-                    grid[i][j] = Node(i, j, False, 999, 2)
-
-        for b in bombs:
-            b.get_range(map)
-            for x in b.sectors:
-                grid[x[0]][x[1]].weight = 5
-                grid[x[0]][x[1]].value = 3
-            grid[b.pos_x][b.pos_y].reach = False
-
-        for e in explosions:
-            for s in e.sectors:
-                grid[s[0]][s[1]].reach = False
-
-        for x in enemys:
-            if x == self:
-                continue
-            elif not x.life:
-                continue
-            else:
-                grid[int(x.pos_x / Enemy.TILE_SIZE)][int(x.pos_y / Enemy.TILE_SIZE)].reach = False
-                grid[int(x.pos_x / Enemy.TILE_SIZE)][int(x.pos_y / Enemy.TILE_SIZE)].value = 1
-        return grid
-
-    def load_animations(self, en, scale):
-        front = []
-        back = []
-        left = []
-        right = []
-        resize_width = scale
-        resize_height = scale
-
-        image_path = 'images/enemy/e'
-        if en == '':
-            image_path = 'images/hero/p'
-
-        f1 = pygame.image.load(image_path + en + 'f0.png')
-        f2 = pygame.image.load(image_path + en + 'f1.png')
-        f3 = pygame.image.load(image_path + en + 'f2.png')
-
-        f1 = pygame.transform.scale(f1, (resize_width, resize_height))
-        f2 = pygame.transform.scale(f2, (resize_width, resize_height))
-        f3 = pygame.transform.scale(f3, (resize_width, resize_height))
-
-        front.append(f1)
-        front.append(f2)
-        front.append(f3)
-
-        r1 = pygame.image.load(image_path + en + 'r0.png')
-        r2 = pygame.image.load(image_path + en + 'r1.png')
-        r3 = pygame.image.load(image_path + en + 'r2.png')
-
-        r1 = pygame.transform.scale(r1, (resize_width, resize_height))
-        r2 = pygame.transform.scale(r2, (resize_width, resize_height))
-        r3 = pygame.transform.scale(r3, (resize_width, resize_height))
-
-        right.append(r1)
-        right.append(r2)
-        right.append(r3)
-
-        b1 = pygame.image.load(image_path + en + 'b0.png')
-        b2 = pygame.image.load(image_path + en + 'b1.png')
-        b3 = pygame.image.load(image_path + en + 'b2.png')
-
-        b1 = pygame.transform.scale(b1, (resize_width, resize_height))
-        b2 = pygame.transform.scale(b2, (resize_width, resize_height))
-        b3 = pygame.transform.scale(b3, (resize_width, resize_height))
-
-        back.append(b1)
-        back.append(b2)
-        back.append(b3)
-
-        l1 = pygame.image.load(image_path + en + 'l0.png')
-        l2 = pygame.image.load(image_path + en + 'l1.png')
-        l3 = pygame.image.load(image_path + en + 'l2.png')
-
-        l1 = pygame.transform.scale(l1, (resize_width, resize_height))
-        l2 = pygame.transform.scale(l2, (resize_width, resize_height))
-        l3 = pygame.transform.scale(l3, (resize_width, resize_height))
-
-        left.append(l1)
-        left.append(l2)
-        left.append(l3)
-
-        self.animation.append(front)
-        self.animation.append(right)
-        self.animation.append(back)
-        self.animation.append(left)
-
+        return tmp_grid
