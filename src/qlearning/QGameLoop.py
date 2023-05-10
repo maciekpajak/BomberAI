@@ -15,8 +15,8 @@ class GameLoop:
     clock = None
     player_alg = Algorithm.PLAYER
     en1_alg = Algorithm.DFS
-    en2_alg = Algorithm.NONE
-    en3_alg = Algorithm.NONE
+    en2_alg = Algorithm.DFS
+    en3_alg = Algorithm.DFS
     show_path = True
     surface = None
     TILE_SIZE = 4
@@ -31,7 +31,8 @@ class GameLoop:
 
         self.g = Game(self.show_path, self.player_alg, self.en1_alg, self.en2_alg, self.en3_alg, self.TILE_SIZE, speed)
         self.speed = speed
-        self.g.init_sprites()
+        if show_game:
+            self.g.init_sprites()
 
     def get_state(self):
         # return self.g.get_state()
@@ -40,12 +41,12 @@ class GameLoop:
         # return self.g.get_5grid_state()
 
     def get_reward(self, action, player_killed_enemy, sectors_cleared_by_player, life_time, is_move_possible):
-        r = -0.1
-        if self.g.player.bomb_limit == 0 and action == Action.PLANT_BOMB:
-            r -= 5
+        r = 0
+        if Action(action) in list(Action):
+            r -= 1
         if not is_move_possible:
-            r -= 3
-        if not self.g.player.life:
+            r -= 5
+        if not self.g.player.alive:
             r -= 300
         if player_killed_enemy:
             r += 500
@@ -64,12 +65,10 @@ class GameLoop:
         rewards = []
         while not self.GAMEOVER:
             # life_time += 0.01
-            if not self.g.player.life:
+            if not self.g.player.alive:
                 break
             else:
                 dt = clock.tick(int(15 * self.speed))
-                for en in self.g.enemy_list:
-                    en.make_move(self.g.grid, self.g.bombs, self.g.explosions, self.g.ene_blocks)
 
                 state = self.get_state()
                 if state not in qtable:
@@ -78,15 +77,20 @@ class GameLoop:
                 action = np.argmax(qtable[state])
 
                 if np.random.random() < epsilon:
-                    action = np.random.choice(list(Action), 1, p=[0.2, 0.2, 0.2, 0.2, 0.15, 0.05])[0].value
+                    action = np.random.choice(list(Action), 1, p=[0.2, 0.2, 0.2, 0.2, 0.0, 0.2])[0].value
 
-                is_move_possible = self.g.move_player(Action(action))
-                player_killed_enemy, sectors_cleared_by_player = self.g.update_bombs(dt)
-                reward = self.get_reward(action, player_killed_enemy, sectors_cleared_by_player, life_time, is_move_possible)
+
+                for en in self.g.enemy_list:
+                    en.choose_move(self.g.grid, self.g.bombs, self.g.explosions, self.g.ene_blocks, state)
+                is_move_possible = self.g.player.move(Action(action), self.g.grid, self.g.bombs, self.g.enemy_list, self.g.power_ups)
+
                 if self.show_game:
                     self.g.draw(self.surface)
 
-                if self.g.player.life:
+                player_killed_enemy, sectors_cleared_by_player = self.g.update_bombs(dt)
+                reward = self.get_reward(action, player_killed_enemy, sectors_cleared_by_player, life_time, is_move_possible)
+
+                if self.g.player.alive:
                     future_state = self.get_state()
                     if future_state not in qtable:
                         qtable[future_state] = np.random.uniform(0, 1, 6)
@@ -100,7 +104,7 @@ class GameLoop:
                     self.GAMEOVER = True
 
                 rewards.append(reward)
-                if np.sum([enemy.life for enemy in self.g.enemy_list]) == 0:
+                if np.sum([enemy.alive for enemy in self.g.enemy_list]) == 0:
                     self.GAMEOVER = True
 
         return np.mean(rewards)
