@@ -108,3 +108,32 @@ class GameLoop:
                     self.GAMEOVER = True
 
         return np.mean(rewards)
+
+    def show_game(self, qtable):
+        self.g.generate_map(GRID_BASE)
+        clock = pygame.time.Clock()
+        while not self.GAMEOVER:
+            if not self.g.player.alive:
+                break
+            else:
+                dt = clock.tick(int(15 * self.speed))
+                for en in self.g.enemy_list:
+                    en.choose_move(self.g.grid, self.g.bombs, self.g.explosions, self.g.ene_blocks)
+
+                state = self.get_state()
+
+                if state not in qtable:
+                    action = np.random.choice(list(Action), 1, p=[0.2, 0.2, 0.2, 0.2, 0.0, 0.2])[0].value
+                else:
+                    action = np.argmax(qtable[state])
+
+                self.g.player.move(Action(action), self.g.grid, self.g.bombs, self.g.enemy_list,
+                                                      self.g.power_ups)
+
+                if self.show_game:
+                    self.g.draw(self.surface)
+
+                self.g.update_bombs(dt)
+
+                if np.sum([enemy.alive for enemy in self.g.enemy_list]) == 0:
+                    self.GAMEOVER = True
