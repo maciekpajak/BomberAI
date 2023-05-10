@@ -2,7 +2,7 @@ import math
 
 import pygame
 
-from src.game import Explosion
+from src.game.explosion import Explosion
 from src.game.enums.action import Action
 from src.game.bomb import Bomb
 from src.game.enums.power_up_type import PowerUpType

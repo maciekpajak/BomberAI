@@ -5,7 +5,7 @@ import pygame
 import sys
 import random
 
-from src.game import Bomb, PowerUp
+from src.game import Bomb, PowerUp, Tile
 from src.game.enums import Action
 from src.game.player import Player
 from src.game.explosion import Explosion
