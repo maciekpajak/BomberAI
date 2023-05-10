@@ -1,6 +1,14 @@
+from enum import Enum
+from pathlib import Path
+
 import numpy as np
+import pandas as pd
 import pygame
 import random
+
+from src.game.enums import Tile
+from src.game.enums.action import Action
+from src.game.agent import Agent
 from src.game.bomb import Bomb
 from src.game.node import Node
 from src.game.enums.algorithm import Algorithm
@@ -26,6 +34,10 @@ class Enemy:
         self.bomb_limit = 1
         self.plant = False
         self.algorithm = alg
+        if self.algorithm == Algorithm.Q:
+            qtable_path = (Path('.') / 'src' / 'qtable' / 'qtable.csv').resolve()
+            self.qtable = pd.read_csv(qtable_path, index_col='State',)
+            self.qtable = self.qtable.transpose().to_dict(orient='list')
 
     def move(self, map, bombs, explosions, enemy):
 
@@ -53,36 +65,42 @@ class Enemy:
         else:
             self.frame += 1
 
-    def make_move(self, map, bombs, explosions, enemy):
+    def random_path(self, grid):
+        n = np.random.randint(5, 10)
+        path = [[self.pos_x, self.pos_y]]
 
-        if not self.life:
-            return
-        if len(self.movement_path) == 0:
-            if self.plant:
-                bombs.append(self.plant_bomb(map))
-                self.plant = False
-                map[int(self.pos_x / Enemy.TILE_SIZE)][int(self.pos_y / Enemy.TILE_SIZE)] = 3
-            if self.algorithm is Algorithm.DFS:
-                self.dfs(self.create_grid(map, bombs, explosions, enemy))
-            else:
-                self.dijkstra(self.create_grid_dijkstra(map, bombs, explosions, enemy))
+        for i in range(n):
+            random.shuffle(self.dire)
+            x_last, y_last = path[-1]
+            if grid[x_last][y_last] == TileType.SAFE and self.bomb_limit == 0:  # path to safe place after planting bomb
+                self.movement_path.append(Action.NO_ACTION)
+                break
 
-        else:
-            self.direction = self.movement_path[0]
-            self.move(map, bombs, explosions, enemy)
+            grid[x_last][y_last] = TileType.UNREACHABLE
 
-    def plant_bomb(self, map):
-        b = Bomb(self.range, round(self.pos_x / Enemy.TILE_SIZE), round(self.pos_y / Enemy.TILE_SIZE), map, self, self.speed)
-        self.bomb_limit -= 1
-        return b
+            good_move_found = False
+            if not good_move_found:
+                for action_arr in self.dire:
+                    if grid[x_last + action_arr[0]][y_last + action_arr[1]] == TileType.SAFE:
+                        path.append([x_last + action_arr[0], y_last + action_arr[1]])
+                        self.movement_path.append(action_arr[2])
+                        good_move_found = True
+                        break
+            if not good_move_found:
+                for action_arr in self.dire:
+                    if grid[x_last + action_arr[0]][y_last + action_arr[1]] == TileType.UNSAFE:
+                        path.append([x_last + action_arr[0], y_last + action_arr[1]])
+                        self.movement_path.append(action_arr[2])
+                        good_move_found = True
+                        break
+            if not good_move_found:
+                path.append([x_last, y_last])
+                self.movement_path.append(Action.NO_ACTION)
+                break
 
-    def check_death(self, exp):
-
-        for e in exp:
-            for s in e.sectors:
-                if int(self.pos_x / Enemy.TILE_SIZE) == s[0] and int(self.pos_y / Enemy.TILE_SIZE) == s[1]:
-                    self.life = False
-                    return e.bomber
+        if self.bomb_limit != 0:
+            self.movement_path.append(Action.PLANT_BOMB)
+        self.path = path
 
     def dfs(self, grid):
 
