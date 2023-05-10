@@ -10,7 +10,7 @@ class Bomb:
         self.pos_x = x
         self.pos_y = y
         self.speed = speed
-        self.time_to_explode = 3000 / (speed ** 0.5)
+        self.time_to_explode = 1500 / (speed**0.5)
         self.bomber = bomber
         self.sectors = []
         self.get_range(map)
@@ -19,9 +19,9 @@ class Bomb:
 
         self.time_to_explode = self.time_to_explode - dt
 
-        if self.time_to_explode < (1000 / self.speed):
+        if self.time_to_explode < (500 / self.speed):
             self.frame = 2
-        elif self.time_to_explode < (2000 / self.speed):
+        elif self.time_to_explode < (1000 / self.speed):
             self.frame = 1
 
     def get_range(self, map):
