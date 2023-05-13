@@ -1,5 +1,6 @@
 from random import random
 
+from src.game.enums import Tile
 from src.game.enums.power_up_type import PowerUpType
 from src.game.power_up import PowerUp
 
@@ -25,7 +26,7 @@ class Explosion:
         self.bomb_chain(bombs, map, power_ups)
         return self.bomber
 
-    def bomb_chain(self, bombs, map, power_ups):
+    def bomb_chain(self, bombs, grid, power_ups):
 
         for s in self.sectors:
             for x in power_ups:
@@ -34,15 +35,15 @@ class Explosion:
 
             for x in bombs:
                 if x.pos_x == s[0] and x.pos_y == s[1]:
-                    map[x.pos_x][x.pos_y] = 0
+                    grid[x.pos_x][x.pos_y] = Tile.GROUND
                     x.bomber.bomb_limit += 1
-                    self.explode(map, bombs, x, power_ups)
+                    self.explode(grid, bombs, x, power_ups)
 
-    def clear_sectors(self, map, power_ups):
+    def clear_sectors(self, grid, power_ups):
 
         sectors_cleared = 0
         for i in self.sectors:
-            if map[i[0]][i[1]] == 2:
+            if grid[i[0]][i[1]] == Tile.BOX:
                 sectors_cleared += 1
                 # uncomment to enable powerups
                 #
@@ -52,7 +53,7 @@ class Explosion:
                 # elif r == 1:
                 #     power_ups.append(PowerUp(i[0], i[1], PowerUpType.FIRE))
 
-            map[i[0]][i[1]] = 0
+            grid[i[0]][i[1]] = Tile.GROUND
         return sectors_cleared
 
     def update(self, dt):

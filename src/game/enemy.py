@@ -167,9 +167,9 @@ class Enemy(Agent):
 
         for i in range(len(grid)):
             for j in range(len(grid[i])):
-                if grid[i][j] == Tile.SOLID.value:
+                if grid[i][j] == Tile.SOLID:
                     tmp_grid[i][j] = TileType.UNREACHABLE
-                elif grid[i][j] == Tile.BOX.value:
+                elif grid[i][j] == Tile.BOX:
                     tmp_grid[i][j] = TileType.DESTROYABLE
 
         for x in enemies:

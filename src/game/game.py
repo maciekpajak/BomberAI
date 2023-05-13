@@ -12,38 +12,6 @@ from src.game.enums.algorithm import Algorithm
 
 BACKGROUND_COLOR = (107, 142, 35)
 
-GRID_BASE = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-             [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-             [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-             [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-             [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-             [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-             [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-             [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-             [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-             [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-             [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-             [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
-
-
-# GRID_BASE = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-#              [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-#              [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-#              [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-#              [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-#              [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-#              [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-#              [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-#              [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-#              [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-#              [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-#              [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-#              [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-#              [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-#              [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
-
-
 class Game:
 
     def __init__(self, show_path: bool, player_alg, en1_alg, en2_alg, en3_alg, scale, speed):
@@ -52,8 +20,8 @@ class Game:
         self.explosions: list[Explosion] = []
         self.bombs: list[Bomb] = []
         self.power_ups: list[PowerUp] = []
-        self.game_ended = False
-        self.grid = None
+        self.game_ended: bool = False
+        self.grid, self.grid_h, self.grid_w = self.generate_map(grid_path, box_density=box_density)
         self.show_path = show_path
         self.scale = scale
         self.speed = speed
@@ -64,19 +32,19 @@ class Game:
 
     def init_players(self, player_alg, en1_alg, en2_alg, en3_alg):
         if en1_alg is not Algorithm.NONE:
-            en1 = Enemy(len(GRID_BASE[0]) - 2, len(GRID_BASE) - 2, en1_alg, self.speed)
+            en1 = Enemy(self.grid_h - 2, self.grid_w - 2, en1_alg, self.speed)
             en1.load_animations('images/enemy/e1', self.scale)
             self.enemy_list.append(en1)
             self.ene_blocks.append(en1)
 
         if en2_alg is not Algorithm.NONE:
-            en2 = Enemy(1, len(GRID_BASE) - 2, en2_alg, self.speed)
+            en2 = Enemy(1, self.grid_w - 2, en2_alg, self.speed)
             en2.load_animations('images/enemy/e2', self.scale)
             self.enemy_list.append(en2)
             self.ene_blocks.append(en2)
 
         if en3_alg is not Algorithm.NONE:
-            en3 = Enemy(len(GRID_BASE[0]) - 2, 1, en3_alg, self.speed)
+            en3 = Enemy(self.grid_h - 2, 1, en3_alg, self.speed)
             en3.load_animations('images/enemy/e3', self.scale)
             self.enemy_list.append(en3)
             self.ene_blocks.append(en3)
@@ -138,7 +106,7 @@ class Game:
         surface.fill(BACKGROUND_COLOR)
         for i in range(len(self.grid)):
             for j in range(len(self.grid[i])):
-                surface.blit(self.terrain_images[self.grid[i][j]],
+                surface.blit(self.terrain_images[self.grid[i][j].value],
                              (i * self.scale, j * self.scale, self.scale, self.scale))
 
         for pu in self.power_ups:
@@ -178,7 +146,6 @@ class Game:
         pygame.display.update()
 
     def run(self, surface):
-        self.generate_map(GRID_BASE)
         # power_ups.append(PowerUp(1, 2, PowerUpType.BOMB))
         # power_ups.append(PowerUp(2, 1, PowerUpType.FIRE))
         clock = pygame.time.Clock()
@@ -236,10 +203,10 @@ class Game:
         player_killed_enemy = False
         for b in self.bombs:
             b.update(dt)
-            self.grid[b.pos_x][b.pos_y] = 3
+            self.grid[b.pos_x][b.pos_y] = Tile.BOMB
             if b.time_to_explode < 1:
                 b.bomber.bomb_limit += 1
-                self.grid[b.pos_x][b.pos_y] = 0
+                self.grid[b.pos_x][b.pos_y] = Tile.GROUND
                 exp_temp = Explosion(b.pos_x, b.pos_y, b.range, self.speed)
                 exp_temp.explode(self.grid, self.bombs, b, self.power_ups)
                 sectors_cleared = exp_temp.clear_sectors(self.grid, self.power_ups)
@@ -268,18 +235,20 @@ class Game:
 
         return True
 
-    def generate_map(self, grid_ori):
-        self.grid = np.copy(grid_ori)
-        for i in range(1, len(self.grid) - 1):
-            for j in range(1, len(self.grid[i]) - 1):
-                if self.grid[i][j] != 0:
+    def generate_map(self, grid_path, box_density: int = 5, no_box_area:int = 2) -> Tuple[np.ndarray[Tile], int, int]:
+        grid = np.genfromtxt(grid_path, delimiter=',')
+        grid_tiles = np.genfromtxt(grid_path, delimiter=',').astype(dtype=Tile)
+        grid_tiles[grid_tiles == Tile.SOLID.value] = Tile.SOLID
+        grid_tiles[grid_tiles == Tile.GROUND.value] = Tile.GROUND
+        h, w = grid_tiles.shape
+        for y in range(1, h - 1):
+            for x in range(1, w - 1):
+                if grid_tiles[y][x] == Tile.SOLID:
                     continue
-                elif (i < 3 or i > len(self.grid) - 4) and (j < 3 or j > len(self.grid[i]) - 4):
-                    continue
-                if random.randint(0, 9) < 6:
-                    self.grid[i][j] = 2
-
-        self.grid = self.grid
+                if (no_box_area < y < h - no_box_area - 1) or (no_box_area < x < w - no_box_area - 1):
+                    if random.randint(0, 9) < box_density:
+                        grid_tiles[y][x] = Tile.BOX
+        return grid_tiles, h, w
 
     def get_state(self):
         state = ''.join([str(y_show) for x_show in self.grid for y_show in x_show])
@@ -317,9 +286,9 @@ class Game:
 
         for tile in tiles9:
             if tile[0] < 0 or tile[0] >= len(self.grid) or tile[1] < 0 or tile[1] >= len(self.grid):
-                state += '1'
+                state += str(Tile.SOLID.value)
             else:
-                state += str(self.grid[tile[0]][tile[1]])
+                state += str(self.grid[tile[0]][tile[1]].value)
 
         for tile in tiles9:
             bombs_state = 'b00'
@@ -349,10 +318,10 @@ class Game:
 
     def get_5grid_state(self):
         state = 'g'
-        x, y = int(self.player.pos_x / 4), int(self.player.pos_y / 4)
+        x, y = self.player.pos_x, self.player.pos_y
         tiles5 = [[x, y], [x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]
         for tile in tiles5:
-            state += str(self.grid[tile[0]][tile[1]])
+            state += str(self.grid[tile[0]][tile[1]].value)
 
         for tile in tiles5:
             bombs_state = 'b00'

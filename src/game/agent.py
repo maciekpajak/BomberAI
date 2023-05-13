@@ -44,11 +44,10 @@ class Agent:
         elif action == Action.PLANT_BOMB and self.bomb_limit > 0:
             bomb = self.plant_bomb(grid)
             bombs.append(bomb)
-            grid[bomb.pos_x][bomb.pos_y] = 3
-
+            grid[bomb.pos_x][bomb.pos_y] = Tile.BOMB
 
         step = grid[self.pos_x + dx][self.pos_y + dy]
-        if step == Tile.SOLID.value or step == Tile.BOX.value or step == 3:
+        if step == Tile.SOLID or step == Tile.BOX or step == Tile.BOMB:
             return False
         else:
             self.pos_x += dx
@@ -57,7 +56,7 @@ class Agent:
         return True
 
     def plant_bomb(self, grid):
-        b = Bomb(self.bomb_range,self.pos_x,self.pos_y,grid, self, self.speed)
+        b = Bomb(self.bomb_range, self.pos_x, self.pos_y, grid, self, self.speed)
         self.bomb_limit -= 1
         return b
 
