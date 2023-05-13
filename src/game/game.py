@@ -25,7 +25,8 @@ class Game:
                  scale: int,
                  speed: float = 1,
                  show_path: bool = False,
-                 box_density: int = 5):
+                 box_density: int = 5,
+                 shuffle_positions:bool =True):
         self.grid_tiles = None
         self.enemy_list: list[Enemy] = []
         self.agents_on_board: list[Agent] = []
@@ -40,33 +41,39 @@ class Game:
 
         self.player = None
 
-        self.init_players(player_alg, en1_alg, en2_alg, en3_alg)
+        self.init_players(player_alg, en1_alg, en2_alg, en3_alg, shuffle_positions)
 
-    def init_players(self, player_alg, en1_alg, en2_alg, en3_alg):
+    def init_players(self, player_alg, en1_alg, en2_alg, en3_alg, shuffle_positions=True):
+        pos = [[self.grid_h - 2, self.grid_w - 2],
+                     [1, self.grid_w - 2],
+                     [self.grid_h - 2, 1],
+                     [1,1 ]]
+        if shuffle_positions:
+            np.random.shuffle(pos)
         if en1_alg is not Algorithm.NONE:
-            en1 = Enemy(self.grid_h - 2, self.grid_w - 2, en1_alg, self.speed)
+            en1 = Enemy(pos[0][0], pos[0][1], en1_alg, self.speed)
             en1.load_animations('images/enemy/e1', self.scale)
             self.enemy_list.append(en1)
             self.agents_on_board.append(en1)
 
         if en2_alg is not Algorithm.NONE:
-            en2 = Enemy(1, self.grid_w - 2, en2_alg, self.speed)
+            en2 = Enemy(pos[1][0], pos[1][1],en2_alg, self.speed)
             en2.load_animations('images/enemy/e2', self.scale)
             self.enemy_list.append(en2)
             self.agents_on_board.append(en2)
 
         if en3_alg is not Algorithm.NONE:
-            en3 = Enemy(self.grid_h - 2, 1, en3_alg, self.speed)
+            en3 = Enemy(pos[2][0], pos[2][1],en3_alg, self.speed)
             en3.load_animations('images/enemy/e3', self.scale)
             self.enemy_list.append(en3)
             self.agents_on_board.append(en3)
 
         if player_alg is Algorithm.PLAYER:
-            self.player = Player(1, 1, self.speed)
+            self.player = Player(pos[3][0], pos[3][1], self.speed)
             self.player.load_animations('images/hero/p', self.scale)
             self.agents_on_board.append(self.player)
         elif player_alg is not Algorithm.NONE:
-            en0 = Enemy(1, 1, player_alg, self.speed)
+            en0 = Enemy(pos[3][0], pos[3][1], player_alg, self.speed)
             en0.load_animations('images/hero/p', self.scale)
             self.enemy_list.append(en0)
             self.agents_on_board.append(en0)
