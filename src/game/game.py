@@ -38,7 +38,7 @@ class Game:
         self.scale = scale
         self.speed = speed
 
-        self.player = Player(1, 1, self.speed)
+        self.player = None
 
         self.init_players(player_alg, en1_alg, en2_alg, en3_alg)
 
@@ -130,7 +130,7 @@ class Game:
             for x in y.sectors:
                 surface.blit(self.explosion_images[y.frame],
                              (x[0] * self.scale, x[1] * self.scale, self.scale, self.scale))
-        if self.player.alive:
+        if self.player is not None and self.player.alive:
             surface.blit(self.player.animation[self.player.direction][self.player.frame], (
                 self.player.pos_x * self.scale, self.player.pos_y * self.scale, self.scale, self.scale))
         for en in self.enemy_list:
@@ -166,8 +166,7 @@ class Game:
             dt = clock.tick(int(15 * self.speed))
 
             action = Action.NO_ACTION
-            # print(self.player.state)
-            if self.player.alive:
+            if self.player is not None and self.player.alive:
                 keys = pygame.key.get_pressed()
                 if keys[pygame.K_DOWN]:
                     action = Action.DOWN
@@ -177,14 +176,6 @@ class Game:
                     action = Action.UP
                 elif keys[pygame.K_LEFT]:
                     action = Action.LEFT
-            # print(pd.DataFrame(self.grid))
-            # print(self.get_state())
-            # print(self.get_9grid_state())
-            state = self.get_9crossgrid_state()
-            # print(self.get_5grid_state())
-
-            if not game_ended:
-                game_ended = self.check_end_game()
 
             for e in pygame.event.get():
                 if e.type == pygame.QUIT:
@@ -195,11 +186,18 @@ class Game:
                     elif e.key == pygame.K_SPACE:
                         action = Action.PLANT_BOMB
 
-            self.player.move(action, self.grid, self.bombs, self.ene_blocks, self.power_ups)
+            if self.player is not None:
+                self.player.move(action, self.grid, self.bombs, self.agents_on_board, self.power_ups)
             for en in self.enemy_list:
-                en.choose_move(self.grid, self.bombs, self.explosions, self.ene_blocks, state)
+                state = self.get_9crossgrid_state(agent=en)
+                en.choose_move(self.grid, self.bombs, self.explosions, self.agents_on_board, state)
+
             self.update_bombs(dt)
+
             self.draw(surface)
+
+            if not game_ended:
+                game_ended = self.check_end_game()
 
         self.explosions.clear()
         self.enemy_list.clear()
@@ -239,7 +237,7 @@ class Game:
         return player_killed_enemy, sectors_cleared_by_player
 
     def check_end_game(self):
-        if not self.player.alive:
+        if self.player is not None and not self.player.alive:
             return True
 
         for en in self.enemy_list:
@@ -263,7 +261,7 @@ class Game:
                         grid_tiles[y][x] = Tile.BOX
         return grid_tiles, h, w
 
-    def get_state(self):
+    def get_state(self, agent):
         state = ''.join([str(y_show) for x_show in self.grid for y_show in x_show])
         state += ''.join([str(self.player.pos_x).zfill(2), str(self.player.pos_y).zfill(2)])
         enemy_state = ''
@@ -276,7 +274,7 @@ class Game:
         state += bombs_state.zfill(10 * 2 * 2)
         return state
 
-    def get_9grid_state(self):
+    def get_9grid_state(self, agent):
         x, y = int(self.player.pos_x / 4), int(self.player.pos_y / 4)
         state = ''.join([str(self.grid[x + i][y + j]) for i in [-1, 0, 1] for j in [-1, 0, 1]])
         enemy_dist = 10000
@@ -291,9 +289,9 @@ class Game:
         state += bombs_state
         return state
 
-    def get_9crossgrid_state(self):
+    def get_9crossgrid_state(self, agent: Agent):
         state = 'g'
-        x, y = self.player.pos_x, self.player.pos_y
+        x, y = agent.pos_x, agent.pos_y
         tiles9 = [[x, y], [x + 1, y], [x + 2, y], [x - 1, y], [x - 2, y], [x, y + 1], [x, y + 2], [x, y - 1],
                   [x, y - 2]]
 
@@ -315,7 +313,9 @@ class Game:
         dist_y = 0
         x_prefix = 0
         dist_x = 0
-        for enemy in self.enemy_list:
+        for enemy in self.agents_on_board:
+            if enemy == agent:
+                continue
             dist = abs(enemy.pos_y - y) + abs(enemy.pos_x - x)
             if dist < enemy_dist:
                 enemy_dist = dist
