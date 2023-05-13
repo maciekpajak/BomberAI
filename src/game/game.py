@@ -196,7 +196,7 @@ class Game:
             if self.player is not None:
                 self.player.move(action, self.grid, self.bombs, self.agents_on_board, self.power_ups)
             for en in self.enemy_list:
-                state = self.get_9crossgrid_state(agent=en)
+                state = self.get_state(agent=en)
                 en.choose_move(self.grid, self.bombs, self.explosions, self.agents_on_board, state)
 
             self.update_bombs(dt)
@@ -268,103 +268,53 @@ class Game:
                         grid_tiles[y][x] = Tile.BOX
         return grid_tiles, h, w
 
-    def get_state(self, agent):
-        state = ''.join([str(y_show) for x_show in self.grid for y_show in x_show])
-        state += ''.join([str(self.player.pos_x).zfill(2), str(self.player.pos_y).zfill(2)])
-        enemy_state = ''
-        for enemy in self.enemy_list:
-            state += ''.join([str(enemy.pos_x).zfill(2), str(enemy.pos_y).zfill(2)])
-        state += enemy_state.zfill(4 * 2 * 2)
-        bombs_state = ''
-        for bomb in self.bombs[:10]:
-            bombs_state += ''.join([str(bomb.pos_x).zfill(2), str(bomb.pos_y).zfill(2)])
-        state += bombs_state.zfill(10 * 2 * 2)
-        return state
+    def get_state(self, agent: Agent, state_type: str = '9cross', min_enemy_dist=10):
 
-    def get_9grid_state(self, agent):
-        x, y = int(self.player.pos_x / 4), int(self.player.pos_y / 4)
-        state = ''.join([str(self.grid[x + i][y + j]) for i in [-1, 0, 1] for j in [-1, 0, 1]])
-        enemy_dist = 10000
-        for enemy in self.enemy_list:
-            dist = abs(enemy.pos_y - y) + abs(enemy.pos_x - x)
-            enemy_dist = min(enemy_dist, dist)
-        state += str(enemy_dist).zfill(3)
-        bombs_state = '0'
-        for bomb in self.bombs:
-            if x - 1 <= bomb.pos_x <= x + 1 and y - 1 <= bomb.pos_y <= y + 1:
-                bombs_state = str(bomb.frame)
-        state += bombs_state
-        return state
-
-    def get_9crossgrid_state(self, agent: Agent):
-        state = 'g'
         x, y = agent.pos_x, agent.pos_y
-        tiles9 = [[x, y], [x + 1, y], [x + 2, y], [x - 1, y], [x - 2, y], [x, y + 1], [x, y + 2], [x, y - 1],
+        tiles = []
+        if state_type == 'full':
+            tiles = [[xx, yy] for xx in range(self.grid_w) for yy in range(self.grid_h)]
+        elif state_type == '9cross':
+            tiles = [[x, y], [x + 1, y], [x + 2, y], [x - 1, y], [x - 2, y], [x, y + 1], [x, y + 2], [x, y - 1],
                   [x, y - 2]]
+        elif state_type == '9square':
+            tiles = [[x, y], [x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]
+        elif state_type == '9square+cross':
+            tiles = [[x, y], [x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]
+        elif state_type == '5cross':
+            tiles = [[x, y], [x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]
+        else:
+            raise NotImplementedError
 
-        for tile in tiles9:
+        agent_state = ''
+        for tile in tiles:
             if tile[0] < 0 or tile[0] >= len(self.grid) or tile[1] < 0 or tile[1] >= len(self.grid):
-                state += str(Tile.SOLID.value)
+                agent_state += str(Tile.SOLID.value)
             else:
-                state += str(self.grid[tile[0]][tile[1]].value)
+                agent_state += str(self.grid[tile[0]][tile[1]].value)
 
-        for tile in tiles9:
-            bombs_state = 'b00'
+        bombs_state = ''
+        for tile in tiles:
+            tmp_bomb_state = '00'
             for bomb in self.bombs:
                 if bomb.pos_x == tile[0] and bomb.pos_y == tile[1]:
-                    bombs_state = 'b1' + str(bomb.frame + 1)
-            state += bombs_state
+                    tmp_bomb_state = '1' + str(bomb.frame + 1)
+            bombs_state += tmp_bomb_state
 
-        enemy_dist = 20
-        y_prefix = 0
-        dist_y = 0
-        x_prefix = 0
-        dist_x = 0
+        closest_enemy = agent
         for enemy in self.agents_on_board:
             if enemy == agent:
                 continue
-            dist = abs(enemy.pos_y - y) + abs(enemy.pos_x - x)
-            if dist < enemy_dist:
-                enemy_dist = dist
-                y_prefix = 0 if enemy.pos_y - y >= 0 else 1
-                x_prefix = 0 if enemy.pos_x - x >= 0 else 1
-                dist_y = abs(enemy.pos_y - y)
-                dist_x = abs(enemy.pos_x - x)
-        enemy_state = ''.join(["ex", str(x_prefix), str(dist_x).zfill(2),
-                               "ey", str(y_prefix), str(dist_y).zfill(2)])
-        state += enemy_state
+            dist = abs(enemy.pos_y - y) + abs(enemy.pos_x - x)  # manhattan dist
+            if dist < min_enemy_dist:
+                min_enemy_dist = dist
+                closest_enemy = enemy
 
-        return state
+        y_prefix = 0 if closest_enemy.pos_y - y >= 0 else 1
+        x_prefix = 0 if closest_enemy.pos_x - x >= 0 else 1
+        dist_y = abs(closest_enemy.pos_y - y)
+        dist_x = abs(closest_enemy.pos_x - x)
+        closest_enemy_state = ''.join([str(x_prefix), str(dist_x).zfill(2), str(y_prefix), str(dist_y).zfill(2)])
 
-    def get_5grid_state(self):
-        state = 'g'
-        x, y = self.player.pos_x, self.player.pos_y
-        tiles5 = [[x, y], [x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]
-        for tile in tiles5:
-            state += str(self.grid[tile[0]][tile[1]].value)
-
-        for tile in tiles5:
-            bombs_state = 'b00'
-            for bomb in self.bombs:
-                if bomb.pos_x == tile[0] and bomb.pos_y == tile[1]:
-                    bombs_state = 'b1' + str(bomb.frame + 1)
-            state += bombs_state
-
-        enemy_dist = 20
-        y_prefix = 0
-        dist_y = 0
-        x_prefix = 0
-        dist_x = 0
-        for enemy in self.enemy_list:
-            dist = abs(enemy.pos_y - y * 4) + abs(enemy.pos_x - x * 4)
-            if dist < enemy_dist:
-                enemy_dist = dist
-                y_prefix = 0 if enemy.pos_y - y * 4 >= 0 else 1
-                x_prefix = 0 if enemy.pos_x - x * 4 >= 0 else 1
-                dist_y = abs(enemy.pos_y - y * 4)
-                dist_x = abs(enemy.pos_x - x * 4)
-        enemy_state = ''.join(["ex", str(x_prefix), str(dist_x).zfill(2),
-                               "ey", str(y_prefix), str(dist_y).zfill(2)])
-        state += enemy_state
-
+        state = agent_state + bombs_state + closest_enemy_state
         return state
