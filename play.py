@@ -21,15 +21,22 @@ if __name__ == '__main__':
     WINDOW_SIZE = (13 * TILE_SIZE, 13 * TILE_SIZE)
 
     clock = None
-    player_alg = Algorithm.Q
+    player_alg = Algorithm.PLAYER
     en1_alg = Algorithm.DFS
     en2_alg = Algorithm.RANDOM
-    en3_alg = Algorithm.RANDOM
+    en3_alg = Algorithm.Q
     show_path = True
+    shuffle_positions = False
     surface = pygame.display.set_mode(WINDOW_SIZE)
 
     grid_path = Path('.') / 'maps' / 'standard' / 'L.csv'
-    g = game.Game(grid_path, player_alg, en1_alg, en2_alg, en3_alg, TILE_SIZE, 1, show_path)
+    g = game.Game(grid_path=grid_path,
+                  player_alg=player_alg, en1_alg=en1_alg, en2_alg=en2_alg, en3_alg=en3_alg,
+                  scale=TILE_SIZE,
+                  speed=1,
+                  show_path=show_path,
+                  box_density=5,
+                  shuffle_positions=shuffle_positions)
     g.init_sprites()
     g.run(surface)
     pygame.display.quit()

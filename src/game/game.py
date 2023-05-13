@@ -15,6 +15,7 @@ from src.game.enums.algorithm import Algorithm
 
 BACKGROUND_COLOR = (107, 142, 35)
 
+
 class Game:
 
     def __init__(self, grid_path: Path,
@@ -26,7 +27,7 @@ class Game:
                  speed: float = 1,
                  show_path: bool = False,
                  box_density: int = 5,
-                 shuffle_positions:bool =True):
+                 shuffle_positions: bool = True):
         self.grid_tiles = None
         self.enemy_list: list[Enemy] = []
         self.agents_on_board: list[Agent] = []
@@ -44,10 +45,11 @@ class Game:
         self.init_players(player_alg, en1_alg, en2_alg, en3_alg, shuffle_positions)
 
     def init_players(self, player_alg, en1_alg, en2_alg, en3_alg, shuffle_positions=True):
-        pos = [[self.grid_h - 2, self.grid_w - 2],
-                     [1, self.grid_w - 2],
-                     [self.grid_h - 2, 1],
-                     [1,1 ]]
+        left_up = [1,1]
+        left_bottom = [self.grid_h - 2, 1]
+        right_up = [1, self.grid_w - 2]
+        right_bottom = [self.grid_h - 2, self.grid_w - 2]
+        pos = [right_bottom, right_up, left_bottom, left_up]
         if shuffle_positions:
             np.random.shuffle(pos)
         if en1_alg is not Algorithm.NONE:
@@ -57,13 +59,13 @@ class Game:
             self.agents_on_board.append(en1)
 
         if en2_alg is not Algorithm.NONE:
-            en2 = Enemy(pos[1][0], pos[1][1],en2_alg, self.speed)
+            en2 = Enemy(pos[1][0], pos[1][1], en2_alg, self.speed)
             en2.load_animations('images/enemy/e2', self.scale)
             self.enemy_list.append(en2)
             self.agents_on_board.append(en2)
 
         if en3_alg is not Algorithm.NONE:
-            en3 = Enemy(pos[2][0], pos[2][1],en3_alg, self.speed)
+            en3 = Enemy(pos[2][0], pos[2][1], en3_alg, self.speed)
             en3.load_animations('images/enemy/e3', self.scale)
             self.enemy_list.append(en3)
             self.agents_on_board.append(en3)
@@ -162,8 +164,6 @@ class Game:
         pygame.display.update()
 
     def run(self, surface):
-        # power_ups.append(PowerUp(1, 2, PowerUpType.BOMB))
-        # power_ups.append(PowerUp(2, 1, PowerUpType.FIRE))
         clock = pygame.time.Clock()
 
         running = True
@@ -213,7 +213,6 @@ class Game:
 
     def update_bombs(self, dt):
         sectors_cleared_by_player = None
-        sectors_cleared = 0
         player_killed_enemy = False
         for b in self.bombs:
             b.update(dt)
@@ -227,12 +226,6 @@ class Game:
                 self.explosions.append(exp_temp)
                 if b.bomber == self.player:
                     sectors_cleared_by_player = sectors_cleared
-        # if self.player not in self.enemy_list:
-        #     self.player.check_death(self.explosions)
-        # for en in self.enemy_list:
-        #     bomber = en.check_death(self.explosions)
-        #     if bomber == self.player:
-        #         player_killed_enemy = True
         for agent in self.agents_on_board:
             bomber = agent.check_death(self.explosions)
             if bomber == self.player:
@@ -253,7 +246,7 @@ class Game:
 
         return True
 
-    def generate_map(self, grid_path, box_density: int = 5, no_box_area:int = 2) -> Tuple[np.ndarray[Tile], int, int]:
+    def generate_map(self, grid_path, box_density: int = 5, no_box_area: int = 2) -> Tuple[np.ndarray[Tile], int, int]:
         grid = np.genfromtxt(grid_path, delimiter=',')
         grid_tiles = np.genfromtxt(grid_path, delimiter=',').astype(dtype=Tile)
         grid_tiles[grid_tiles == Tile.SOLID.value] = Tile.SOLID
@@ -276,7 +269,7 @@ class Game:
             tiles = [[xx, yy] for xx in range(self.grid_w) for yy in range(self.grid_h)]
         elif state_type == '9cross':
             tiles = [[x, y], [x + 1, y], [x + 2, y], [x - 1, y], [x - 2, y], [x, y + 1], [x, y + 2], [x, y - 1],
-                  [x, y - 2]]
+                     [x, y - 2]]
         elif state_type == '9square':
             tiles = [[x, y], [x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]
         elif state_type == '9square+cross':
