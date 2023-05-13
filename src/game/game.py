@@ -16,7 +16,7 @@ class Game:
 
     def __init__(self, show_path: bool, player_alg, en1_alg, en2_alg, en3_alg, scale, speed):
         self.enemy_list: list[Enemy] = []
-        self.ene_blocks = []
+        self.agents_on_board: list[Agent] = []
         self.explosions: list[Explosion] = []
         self.bombs: list[Bomb] = []
         self.power_ups: list[PowerUp] = []
@@ -35,32 +35,29 @@ class Game:
             en1 = Enemy(self.grid_h - 2, self.grid_w - 2, en1_alg, self.speed)
             en1.load_animations('images/enemy/e1', self.scale)
             self.enemy_list.append(en1)
-            self.ene_blocks.append(en1)
+            self.agents_on_board.append(en1)
 
         if en2_alg is not Algorithm.NONE:
             en2 = Enemy(1, self.grid_w - 2, en2_alg, self.speed)
             en2.load_animations('images/enemy/e2', self.scale)
             self.enemy_list.append(en2)
-            self.ene_blocks.append(en2)
+            self.agents_on_board.append(en2)
 
         if en3_alg is not Algorithm.NONE:
             en3 = Enemy(self.grid_h - 2, 1, en3_alg, self.speed)
             en3.load_animations('images/enemy/e3', self.scale)
             self.enemy_list.append(en3)
-            self.ene_blocks.append(en3)
+            self.agents_on_board.append(en3)
 
         if player_alg is Algorithm.PLAYER:
             self.player = Player(1, 1, self.speed)
             self.player.load_animations('images/hero/p', self.scale)
-            self.ene_blocks.append(self.player)
+            self.agents_on_board.append(self.player)
         elif player_alg is not Algorithm.NONE:
             en0 = Enemy(1, 1, player_alg, self.speed)
             en0.load_animations('images/hero/p', self.scale)
             self.enemy_list.append(en0)
-            self.ene_blocks.append(en0)
-            self.player.alive = False
-        else:
-            self.player.alive = False
+            self.agents_on_board.append(en0)
 
     def init_sprites(self):
         self.grass_img = pygame.image.load('images/terrain/grass.png')
@@ -194,7 +191,7 @@ class Game:
 
         self.explosions.clear()
         self.enemy_list.clear()
-        self.ene_blocks.clear()
+        self.agents_on_board.clear()
         self.power_ups.clear()
 
     def update_bombs(self, dt):
@@ -213,10 +210,14 @@ class Game:
                 self.explosions.append(exp_temp)
                 if b.bomber == self.player:
                     sectors_cleared_by_player = sectors_cleared
-        if self.player not in self.enemy_list:
-            self.player.check_death(self.explosions)
-        for en in self.enemy_list:
-            bomber = en.check_death(self.explosions)
+        # if self.player not in self.enemy_list:
+        #     self.player.check_death(self.explosions)
+        # for en in self.enemy_list:
+        #     bomber = en.check_death(self.explosions)
+        #     if bomber == self.player:
+        #         player_killed_enemy = True
+        for agent in self.agents_on_board:
+            bomber = agent.check_death(self.explosions)
             if bomber == self.player:
                 player_killed_enemy = True
         for e in self.explosions:

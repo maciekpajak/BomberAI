@@ -22,7 +22,7 @@ class Agent:
         self.frame = 0
         self.animation = []
 
-    def choose_move(self, grid, bombs, explosions, enemies, state):
+    def choose_move(self, grid, bombs, explosions, agents, state):
         raise NotImplementedError
 
     def move(self, action: Action, grid, bombs, enemies, power_ups) -> bool:

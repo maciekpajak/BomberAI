@@ -34,22 +34,22 @@ class Enemy(Agent):
             self.qtable = pd.read_csv(qtable_path, index_col='State',)
             self.qtable = self.qtable.transpose().to_dict(orient='list')
 
-    def choose_move(self, grid, bombs, explosions, enemies, state):
+    def choose_move(self, grid, bombs, explosions, agents, state):
 
         if not self.alive:
             return
         if not self.movement_path:
             if self.algorithm == Algorithm.DFS:
-                self.dfs(self.create_grid(grid, bombs, explosions, enemies))
+                self.dfs(self.create_grid(grid, bombs, explosions, agents))
             elif self.algorithm == Algorithm.DIJKSTRA:
                 raise NotImplementedError
             elif self.algorithm == Algorithm.Q:
                 self.q_path(state)
             else:
-                self.random_path(self.create_grid(grid, bombs, explosions, enemies))
+                self.random_path(self.create_grid(grid, bombs, explosions, agents))
 
         action = self.movement_path[0]
-        self.move(action, grid, bombs, enemies, None)
+        self.move(action, grid, bombs, agents, None)
         self.movement_path.pop(0)
         self.path.pop(0)
 
@@ -152,13 +152,13 @@ class Enemy(Agent):
         self.movement_path.append(action)
         self.path = [[self.pos_x, self.pos_y]]
 
-    def create_grid(self, grid, bombs, explosions, enemies):
+    def create_grid(self, grid, bombs, explosions, agents):
         tmp_grid = np.full_like(grid, fill_value=TileType.SAFE, dtype=TileType)
 
         for b in bombs:
             b.get_range(grid)
-            for x in b.sectors:
-                tmp_grid[x[0]][x[1]] = TileType.UNSAFE
+            for agent in b.sectors:
+                tmp_grid[agent[0]][agent[1]] = TileType.UNSAFE
             tmp_grid[b.pos_x][b.pos_y] = TileType.UNREACHABLE
 
         for e in explosions:
@@ -172,12 +172,12 @@ class Enemy(Agent):
                 elif grid[i][j] == Tile.BOX:
                     tmp_grid[i][j] = TileType.DESTROYABLE
 
-        for x in enemies:
-            if x == self:
+        for agent in agents:
+            if agent == self:
                 continue
-            elif not x.alive:
+            elif not agent.alive:
                 continue
             else:
-                tmp_grid[x.pos_x][x.pos_y] = TileType.DESTROYABLE
+                tmp_grid[agent.pos_x][agent.pos_y] = TileType.DESTROYABLE
 
         return tmp_grid
