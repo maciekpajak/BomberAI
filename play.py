@@ -28,7 +28,8 @@ if __name__ == '__main__':
     show_path = True
     surface = pygame.display.set_mode(WINDOW_SIZE)
 
-    g = game.Game(show_path, player_alg, en1_alg, en2_alg, en3_alg, TILE_SIZE, 1000)
+    grid_path = Path('.') / 'maps' / 'standard' / 'L.csv'
+    g = game.Game(grid_path, player_alg, en1_alg, en2_alg, en3_alg, TILE_SIZE, 1, show_path)
     g.init_sprites()
     g.run(surface)
     pygame.display.quit()
