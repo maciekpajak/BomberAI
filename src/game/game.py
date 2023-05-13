@@ -1,9 +1,12 @@
+from pathlib import Path
+from typing import Tuple
+
 import numpy as np
 import pygame
 import sys
 import random
 
-from src.game import Bomb, PowerUp, Tile
+from src.game import Bomb, PowerUp, Tile, Agent
 from src.game.enums import Action
 from src.game.player import Player
 from src.game.explosion import Explosion
@@ -14,7 +17,16 @@ BACKGROUND_COLOR = (107, 142, 35)
 
 class Game:
 
-    def __init__(self, show_path: bool, player_alg, en1_alg, en2_alg, en3_alg, scale, speed):
+    def __init__(self, grid_path: Path,
+                 player_alg: Algorithm,
+                 en1_alg: Algorithm,
+                 en2_alg: Algorithm,
+                 en3_alg: Algorithm,
+                 scale: int,
+                 speed: float = 1,
+                 show_path: bool = False,
+                 box_density: int = 5):
+        self.grid_tiles = None
         self.enemy_list: list[Enemy] = []
         self.agents_on_board: list[Agent] = []
         self.explosions: list[Explosion] = []

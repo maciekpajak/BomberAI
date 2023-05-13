@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pygame
 
 from src.game import game
