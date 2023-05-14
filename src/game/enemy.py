@@ -45,15 +45,17 @@ class Enemy(Agent):
                 raise NotImplementedError
             elif self.algorithm == Algorithm.Q:
                 self.q_path(state)
+            elif self.algorithm == Algorithm.RANDOM:
+                self.random(self.create_grid(grid, bombs, explosions, agents))
             else:
-                self.random_path(self.create_grid(grid, bombs, explosions, agents))
+                self.wander(self.create_grid(grid, bombs, explosions, agents))
 
         action = self.movement_path[0]
         self.move(action, grid, bombs, agents, None)
         self.movement_path.pop(0)
         self.path.pop(0)
 
-    def random_path(self, grid):
+    def random(self, grid):
         n = np.random.randint(5, 10)
         path = [[self.pos_x, self.pos_y]]
 
@@ -88,6 +90,41 @@ class Enemy(Agent):
 
         if self.bomb_limit != 0:
             self.movement_path.append(Action.PLANT_BOMB)
+        self.path = path
+
+    def wander(self, grid):
+        n = np.random.randint(5, 10)
+        path = [[self.pos_x, self.pos_y]]
+
+        for i in range(n):
+            random.shuffle(self.dire)
+            x_last, y_last = path[-1]
+            if grid[x_last][y_last] == TileType.SAFE and self.bomb_limit == 0:  # path to safe place after planting bomb
+                self.movement_path.append(Action.NO_ACTION)
+                break
+
+            grid[x_last][y_last] = TileType.UNREACHABLE
+
+            good_move_found = False
+            if not good_move_found:
+                for action_arr in self.dire:
+                    if grid[x_last + action_arr[0]][y_last + action_arr[1]] == TileType.SAFE:
+                        path.append([x_last + action_arr[0], y_last + action_arr[1]])
+                        self.movement_path.append(action_arr[2])
+                        good_move_found = True
+                        break
+            if not good_move_found:
+                for action_arr in self.dire:
+                    if grid[x_last + action_arr[0]][y_last + action_arr[1]] == TileType.UNSAFE:
+                        path.append([x_last + action_arr[0], y_last + action_arr[1]])
+                        self.movement_path.append(action_arr[2])
+                        good_move_found = True
+                        break
+            if not good_move_found:
+                path.append([x_last, y_last])
+                self.movement_path.append(Action.NO_ACTION)
+                break
+
         self.path = path
 
     def dfs(self, grid):

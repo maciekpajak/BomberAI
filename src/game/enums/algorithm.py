@@ -9,3 +9,4 @@ class Algorithm(Enum):
     NONE = 3
     RANDOM = 4
     Q = 5
+    WANDER = 6
