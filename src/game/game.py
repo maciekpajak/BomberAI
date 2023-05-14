@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from typing import Tuple
 
@@ -26,27 +27,27 @@ class Game:
                  scale: float,
                  speed: float = 1,
                  show_path: bool = False,
-                 box_density: int = 5,
-                 shuffle_positions: bool = True):
+                 box_density: int | Tuple[int, int] = 5,
+                 shuffle_positions: bool = True,
+                 max_time=120,
+                 state_type='5cross'):
         self.enemy_list: list[Enemy] = []
         self.agents_on_board: list[Agent] = []
         self.explosions: list[Explosion] = []
         self.bombs: list[Bomb] = []
         self.power_ups: list[PowerUp] = []
         self.game_ended: bool = False
-        self.box_density = box_density
         self.grid = None
         self.grid_h, self.grid_w = self.generate_map(grid, box_density=box_density)
         self.show_path = show_path
         self.scale = scale
         self.speed = speed
-
+        self.playing_time = 0
+        self.max_time  = max_time / speed
+        self.state_type = state_type
+        self.min_enemy_dist = 10
         self.player = None
         self.shuffle_positions = shuffle_positions
-        self.player_alg = player_alg
-        self.en1_alg = en1_alg
-        self.en2_alg = en2_alg
-        self.en3_alg = en3_alg
         self.init_players(player_alg, en1_alg, en2_alg, en3_alg, shuffle_positions)
 
     def init_players(self, player_alg, en1_alg, en2_alg, en3_alg, shuffle_positions=True):
@@ -161,6 +162,12 @@ class Game:
                             pygame.draw.rect(surface, (255, 0, 255, 240),
                                              [sek[0] * self.scale, sek[1] * self.scale, self.scale, self.scale], 1)
 
+        if not self.game_ended:
+            font = pygame.font.SysFont('Bebas', int(self.scale))
+            time_left = self.max_time - self.playing_time
+            tf = font.render(f"{int(time_left)} s", False, (153, 153, 255))
+            surface.blit(tf, (10, 10))
+
         if self.game_ended:
             font = pygame.font.SysFont('Bebas', int(self.scale))
             tf = font.render("Press ESC to go back to menu", False, (153, 153, 255))
@@ -172,8 +179,8 @@ class Game:
         clock = pygame.time.Clock()
 
         running = True
-        game_ended = False
         self.draw(surface)
+        start_time = time.time()
         while running:
             dt = clock.tick(int(15 * self.speed))
 
@@ -208,8 +215,9 @@ class Game:
 
             self.draw(surface)
 
-            if not game_ended:
-                game_ended = self.check_end_game()
+            if not self.game_ended:
+                self.playing_time = time.time() - start_time
+                self.game_ended = self.check_end_game()
 
         self.explosions.clear()
         self.enemy_list.clear()
@@ -242,6 +250,9 @@ class Game:
         return player_killed_enemy, sectors_cleared_by_player
 
     def check_end_game(self):
+        if self.playing_time > self.max_time:
+            return True
+
         if self.player is not None and not self.player.alive:
             return True
 
@@ -273,30 +284,31 @@ class Game:
                         self.grid[y][x] = Tile.BOX
         return h, w
 
-    def get_state(self, agent: Agent, state_type: str = '9cross', min_enemy_dist=10):
+    def get_state(self, agent: Agent):
+
+        agent_state = str(agent.bomb_limit) + str(agent.bomb_range)
 
         x, y = agent.pos_x, agent.pos_y
-        tiles = []
-        if state_type == 'full':
+        if self.state_type == 'full':
             tiles = [[xx, yy] for xx in range(self.grid_w) for yy in range(self.grid_h)]
-        elif state_type == '9cross':
+        elif self.state_type == '9cross':
             tiles = [[x, y], [x + 1, y], [x + 2, y], [x - 1, y], [x - 2, y], [x, y + 1], [x, y + 2], [x, y - 1],
                      [x, y - 2]]
-        elif state_type == '9square':
-            tiles = [[x, y], [x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]
-        elif state_type == '9square+cross':
-            tiles = [[x, y], [x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]
-        elif state_type == '5cross':
+        elif self.state_type == '9square':
+            raise NotImplementedError
+        elif self.state_type == '9square+cross':
+            raise NotImplementedError
+        elif self.state_type == '5cross':
             tiles = [[x, y], [x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]
         else:
             raise NotImplementedError
 
-        agent_state = ''
+        surrounding_state = ''
         for tile in tiles:
             if tile[0] < 0 or tile[0] >= len(self.grid) or tile[1] < 0 or tile[1] >= len(self.grid):
-                agent_state += str(Tile.SOLID.value)
+                surrounding_state += str(Tile.SOLID.value)
             else:
-                agent_state += str(self.grid[tile[0]][tile[1]].value)
+                surrounding_state += str(self.grid[tile[0]][tile[1]].value)
 
         bombs_state = ''
         for tile in tiles:
@@ -311,7 +323,7 @@ class Game:
             if enemy == agent:
                 continue
             dist = abs(enemy.pos_y - y) + abs(enemy.pos_x - x)  # manhattan dist
-            if dist < min_enemy_dist:
+            if dist < self.min_enemy_dist:
                 min_enemy_dist = dist
                 closest_enemy = enemy
 
@@ -321,5 +333,5 @@ class Game:
         dist_x = abs(closest_enemy.pos_x - x)
         closest_enemy_state = ''.join([str(x_prefix), str(dist_x).zfill(2), str(y_prefix), str(dist_y).zfill(2)])
 
-        state = agent_state + bombs_state + closest_enemy_state
+        state = agent_state + surrounding_state + bombs_state + closest_enemy_state
         return state

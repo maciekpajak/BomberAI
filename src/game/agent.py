@@ -45,6 +45,8 @@ class Agent:
             bomb = self.plant_bomb(grid)
             bombs.append(bomb)
             grid[bomb.pos_x][bomb.pos_y] = Tile.BOMB
+        elif action == Action.PLANT_BOMB and self.bomb_limit == 0:
+            return False
 
         step = grid[self.pos_x + dx][self.pos_y + dy]
         if step == Tile.SOLID or step == Tile.BOX or step == Tile.BOMB:

@@ -23,9 +23,9 @@ if __name__ == '__main__':
 
     clock = None
     player_alg = Algorithm.PLAYER
-    en1_alg = Algorithm.DFS
+    en1_alg = Algorithm.Q
     en2_alg = Algorithm.RANDOM
-    en3_alg = Algorithm.Q
+    en3_alg = Algorithm.WANDER
     show_path = True
     shuffle_positions = False
     surface = pygame.display.set_mode(WINDOW_SIZE)
@@ -38,8 +38,10 @@ if __name__ == '__main__':
                   scale=TILE_SIZE,
                   speed=1,
                   show_path=show_path,
-                  box_density=5,
-                  shuffle_positions=shuffle_positions)
+                  box_density=(3,6),
+                  shuffle_positions=shuffle_positions,
+                  max_time=120,
+                  state_type='5cross')
     g.init_sprites()
     g.run(surface)
     pygame.display.quit()
