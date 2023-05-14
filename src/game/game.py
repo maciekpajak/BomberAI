@@ -18,34 +18,39 @@ BACKGROUND_COLOR = (107, 142, 35)
 
 class Game:
 
-    def __init__(self, grid_path: Path,
+    def __init__(self, grid: np.ndarray,
                  player_alg: Algorithm,
                  en1_alg: Algorithm,
                  en2_alg: Algorithm,
                  en3_alg: Algorithm,
-                 scale: int,
+                 scale: float,
                  speed: float = 1,
                  show_path: bool = False,
                  box_density: int = 5,
                  shuffle_positions: bool = True):
-        self.grid_tiles = None
         self.enemy_list: list[Enemy] = []
         self.agents_on_board: list[Agent] = []
         self.explosions: list[Explosion] = []
         self.bombs: list[Bomb] = []
         self.power_ups: list[PowerUp] = []
         self.game_ended: bool = False
-        self.grid, self.grid_h, self.grid_w = self.generate_map(grid_path, box_density=box_density)
+        self.box_density = box_density
+        self.grid = None
+        self.grid_h, self.grid_w = self.generate_map(grid, box_density=box_density)
         self.show_path = show_path
         self.scale = scale
         self.speed = speed
 
         self.player = None
-
+        self.shuffle_positions = shuffle_positions
+        self.player_alg = player_alg
+        self.en1_alg = en1_alg
+        self.en2_alg = en2_alg
+        self.en3_alg = en3_alg
         self.init_players(player_alg, en1_alg, en2_alg, en3_alg, shuffle_positions)
 
     def init_players(self, player_alg, en1_alg, en2_alg, en3_alg, shuffle_positions=True):
-        left_up = [1,1]
+        left_up = [1, 1]
         left_bottom = [self.grid_h - 2, 1]
         right_up = [1, self.grid_w - 2]
         right_bottom = [self.grid_h - 2, self.grid_w - 2]
@@ -157,7 +162,7 @@ class Game:
                                              [sek[0] * self.scale, sek[1] * self.scale, self.scale, self.scale], 1)
 
         if self.game_ended:
-            font = pygame.font.SysFont('Bebas', self.scale)
+            font = pygame.font.SysFont('Bebas', int(self.scale))
             tf = font.render("Press ESC to go back to menu", False, (153, 153, 255))
             surface.blit(tf, (10, 10))
 
@@ -228,7 +233,7 @@ class Game:
                     sectors_cleared_by_player = sectors_cleared
         for agent in self.agents_on_board:
             bomber = agent.check_death(self.explosions)
-            if bomber == self.player:
+            if agent != self.player and bomber == self.player:
                 player_killed_enemy = True
         for e in self.explosions:
             e.update(dt)
@@ -246,20 +251,27 @@ class Game:
 
         return True
 
-    def generate_map(self, grid_path, box_density: int = 5, no_box_area: int = 2) -> Tuple[np.ndarray[Tile], int, int]:
-        grid = np.genfromtxt(grid_path, delimiter=',')
-        grid_tiles = np.genfromtxt(grid_path, delimiter=',').astype(dtype=Tile)
-        grid_tiles[grid_tiles == Tile.SOLID.value] = Tile.SOLID
-        grid_tiles[grid_tiles == Tile.GROUND.value] = Tile.GROUND
-        h, w = grid_tiles.shape
+    def generate_map(self, grid: np.ndarray, box_density: int | Tuple[int, int]= 5, no_box_area: int = 2) -> Tuple[int, int]:
+        self.grid = np.empty_like(grid, dtype=Tile)
+        self.grid[grid == Tile.SOLID.value] = Tile.SOLID
+        self.grid[grid == Tile.GROUND.value] = Tile.GROUND
+        h, w = self.grid.shape
+
+        if isinstance(box_density,Tuple):
+            box_density = random.randint(box_density[0], box_density[1])
+        elif isinstance(box_density, int):
+            box_density = box_density
+        else:
+            raise ValueError
+
         for y in range(1, h - 1):
             for x in range(1, w - 1):
-                if grid_tiles[y][x] == Tile.SOLID:
+                if self.grid[y][x] == Tile.SOLID:
                     continue
                 if (no_box_area < y < h - no_box_area - 1) or (no_box_area < x < w - no_box_area - 1):
                     if random.randint(0, 9) < box_density:
-                        grid_tiles[y][x] = Tile.BOX
-        return grid_tiles, h, w
+                        self.grid[y][x] = Tile.BOX
+        return h, w
 
     def get_state(self, agent: Agent, state_type: str = '9cross', min_enemy_dist=10):
 

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import pygame
 
 from src.game import game
@@ -30,7 +31,9 @@ if __name__ == '__main__':
     surface = pygame.display.set_mode(WINDOW_SIZE)
 
     grid_path = Path('.') / 'maps' / 'standard' / 'L.csv'
-    g = game.Game(grid_path=grid_path,
+
+    grid = np.genfromtxt(grid_path, delimiter=',')
+    g = game.Game(grid=grid,
                   player_alg=player_alg, en1_alg=en1_alg, en2_alg=en2_alg, en3_alg=en3_alg,
                   scale=TILE_SIZE,
                   speed=1,

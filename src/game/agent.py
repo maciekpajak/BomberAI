@@ -63,7 +63,7 @@ class Agent:
     def check_death(self, explosions: list[Explosion]):
         for explosion in explosions:
             for sector in explosion.sectors:
-                if self.pos_x == sector[0] and self.pos_y == sector[1]:
+                if self.pos_x == sector[0] and self.pos_y == sector[1] and self.alive:
                     self.alive = False
                     return explosion.bomber
 
@@ -75,7 +75,7 @@ class Agent:
 
         power_ups.remove(power_up)
 
-    def load_animations(self, image_path, scale: int):
+    def load_animations(self, image_path, scale: float):
         front = []
         back = []
         left = []

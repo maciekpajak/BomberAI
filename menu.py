@@ -61,7 +61,7 @@ class Menu:
     def run_game(self):
         g = game.Game( self.show_path, self.player_alg, self.en1_alg, self.en2_alg, self.en3_alg, TILE_SIZE, 2)
         g.init_sprites()
-        g.run(self.surface)
+        g.play_game(self.surface)
 
     def main_background(self):
         self.surface.fill(COLOR_BACKGROUND)
