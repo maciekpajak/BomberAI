@@ -31,7 +31,7 @@ class Enemy(Agent):
         self.algorithm = alg
         if self.algorithm == Algorithm.Q:
             qtable_path = (Path('.') / 'src' / 'qtable' / 'qtable.csv').resolve()
-            self.qtable = pd.read_csv(qtable_path, index_col='State',)
+            self.qtable = pd.read_csv(qtable_path)
             self.qtable = self.qtable.transpose().to_dict(orient='list')
 
     def choose_move(self, grid, bombs, explosions, agents, state):
