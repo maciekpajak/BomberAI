@@ -14,7 +14,7 @@ class Explosion:
         self.sourceY = y
         self.speed= speed
         self.range = r
-        self.time = 300 / (speed ** 0.5)
+        self.time = 300 / speed
         self.frame = 0
         self.sectors = []
 

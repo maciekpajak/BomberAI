@@ -10,7 +10,7 @@ class Bomb:
         self.pos_x = x
         self.pos_y = y
         self.speed = speed
-        self.time_to_explode = 1500 / (speed**0.5)
+        self.time_to_explode = 1500 / speed
         self.bomber = bomber
         self.sectors = []
         self.get_range(map)

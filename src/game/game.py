@@ -182,7 +182,7 @@ class Game:
         self.draw(surface)
         start_time = time.time()
         while running:
-            dt = clock.tick(int(15 * self.speed))
+            dt = clock.tick(15*self.speed)
 
             action = Action.NO_ACTION
             if self.player is not None and self.player.alive:
@@ -230,7 +230,7 @@ class Game:
         for b in self.bombs:
             b.update(dt)
             self.grid[b.pos_x][b.pos_y] = Tile.BOMB
-            if b.time_to_explode < 1:
+            if b.time_to_explode <= 0:
                 b.bomber.bomb_limit += 1
                 self.grid[b.pos_x][b.pos_y] = Tile.GROUND
                 exp_temp = Explosion(b.pos_x, b.pos_y, b.range, self.speed)

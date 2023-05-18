@@ -104,7 +104,7 @@ class QModel:
             if not game_over:
                 game.playing_time = time.time() - start_time
                 game_over = game.check_end_game()
-            dt = clock.tick(int(15 * self.training_speed))
+            dt = 1000 / (15 * self.training_speed)
 
             state = game.get_state(game.player)
             if state not in self.qtable:
@@ -173,7 +173,7 @@ class QModel:
             if not game_over:
                 game.playing_time = time.time() - start_time
                 game_over = game.check_end_game()
-            dt = clock.tick(int(15 * speed))
+            dt = clock.tick(15 * speed)
 
             state = game.get_state(game.player)
 
@@ -209,7 +209,7 @@ class QModel:
                 if not game_over:
                     game.playing_time = time.time() - start_time
                     game_over = game.check_end_game()
-                dt = clock.tick(int(15 * self.training_speed))
+                dt = 1000 / (15 * self.training_speed)
 
                 state = game.get_state(game.player)
 
