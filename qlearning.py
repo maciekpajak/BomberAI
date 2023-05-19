@@ -62,7 +62,7 @@ if __name__ == "__main__":
                    box_density=(3, 6),
                    shuffle_positions=True,
                    max_playing_time=120,
-                   state_type='9cross')
+                   state_type='cross')
 
     history = model.fit(epochs=epochs,
                         episodes=episodes,

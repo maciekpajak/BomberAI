@@ -26,7 +26,9 @@ class QModel:
                 de=0.01,
                 gamma=0.9,
                 n_past_states=10,
-                state_type='5cross'):
+                state_type: str = 'cross',
+                state_range: int = 2,
+                min_enemy_dist: int = 10):
         self.get_reward = get_reward
         self.learning_rate = learning_rate
         self.discount = discount
@@ -35,6 +37,8 @@ class QModel:
         self.de = de
         self.n_past_states = n_past_states
         self.state_type = state_type
+        self.state_range = state_range
+        self.min_enemy_dist = min_enemy_dist
 
     def set_game(self, grid: np.ndarray,
                  en1_alg: Algorithm,
@@ -44,7 +48,9 @@ class QModel:
                  box_density: int | Tuple[int, int] = 5,
                  shuffle_positions: bool = True,
                  max_playing_time=120,
-                 state_type='5cross'):
+                 state_type: str = 'cross',
+                 state_range: int = 2,
+                 min_enemy_dist: int = 10):
         self.grid = grid
         self.en1_alg = en1_alg
         self.en2_alg = en2_alg
@@ -55,6 +61,8 @@ class QModel:
         self.max_playing_time = max_playing_time
 
         self.state_type = state_type
+        self.state_range = state_range
+        self.min_enemy_dist = min_enemy_dist
 
     def fit(self, epochs=10, episodes=1000, start_epoch=0, show_game=False, path_to_save='qtable.csv',
             log_file='log.csv'):
@@ -114,7 +122,10 @@ class QModel:
                 game_over = game.check_end_game()
             dt = 1000 / (15 * self.training_speed)
 
-            state = game.get_state(game.player)
+            state = game.get_state(agent=game.player,
+                                   state_type=self.state_type,
+                                   state_range=self.state_range,
+                                   min_enemy_dist=self.min_enemy_dist)
             if state not in self.qtable:
                 self.qtable[state] = np.round(np.random.uniform(0, 0, 6), 3)
 
@@ -128,7 +139,10 @@ class QModel:
             is_move_possible = game.player.move(Action(action), game.grid, game.bombs, game.enemy_list, game.power_ups)
 
             for en in game.enemy_list:
-                state = game.get_state(en)
+                state = game.get_state(agent=en,
+                                       state_type=self.state_type,
+                                       state_range=self.state_range,
+                                       min_enemy_dist=self.min_enemy_dist)
                 en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board, game.power_ups,
                                state)
 
@@ -138,7 +152,10 @@ class QModel:
                                      sectors_cleared_by_player)
 
             if game.player.alive:
-                future_state = game.get_state(game.player)
+                future_state = game.get_state(agent=game.player,
+                                              state_type=self.state_type,
+                                              state_range=self.state_range,
+                                              min_enemy_dist=self.min_enemy_dist)
                 if future_state not in self.qtable:
                     self.qtable[future_state] = np.round(np.random.uniform(0, 0, 6), 3)
                 future_action_value = max(self.qtable[future_state])
@@ -182,7 +199,10 @@ class QModel:
                 game_over = game.check_end_game()
             dt = clock.tick(15 * speed)
 
-            state = game.get_state(game.player)
+            state = game.get_state(agent=game.player,
+                                   state_type=self.state_type,
+                                   state_range=self.state_range,
+                                   min_enemy_dist=self.min_enemy_dist)
 
             if state not in self.qtable:
                 action = np.random.choice(list(Action), 1, p=[0.2, 0.2, 0.2, 0.2, 0.0, 0.2])[0]
@@ -193,7 +213,10 @@ class QModel:
                              game.power_ups)
 
             for en in game.enemy_list:
-                state = game.get_state(en)
+                state = game.get_state(agent=en,
+                                       state_type=self.state_type,
+                                       state_range=self.state_range,
+                                       min_enemy_dist=self.min_enemy_dist)
                 en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board, game.power_ups,
                                state)
 
@@ -217,7 +240,10 @@ class QModel:
                     game_over = game.check_end_game()
                 dt = 1000 / (15 * self.training_speed)
 
-                state = game.get_state(game.player)
+                state = game.get_state(agent=game.player,
+                                       state_type=self.state_type,
+                                       state_range=self.state_range,
+                                       min_enemy_dist=self.min_enemy_dist)
 
                 if state not in self.qtable:
                     action = np.random.choice(list(Action), 1, p=[0.2, 0.2, 0.2, 0.2, 0.0, 0.2])[0]
@@ -228,7 +254,10 @@ class QModel:
                                  game.power_ups)
 
                 for en in game.enemy_list:
-                    state = game.get_state(en)
+                    state = game.get_state(agent=en,
+                                           state_type=self.state_type,
+                                           state_range=self.state_range,
+                                           min_enemy_dist=self.min_enemy_dist)
                     en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board, game.power_ups,
                                    state)
 
