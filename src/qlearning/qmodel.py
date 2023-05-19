@@ -20,7 +20,9 @@ class QModel:
         qtable = pd.read_csv(path)
         self.qtable = qtable.transpose().to_dict(orient='list')
 
-    def compile(self, get_reward: Callable, learning_rate=0.5,
+    def compile(self,
+                get_reward: Callable[[bool, Action, bool, bool, int, int], float],
+                learning_rate=0.5,
                 discount=0.98,
                 epsilon=0.1,
                 de=0.01,
@@ -47,7 +49,7 @@ class QModel:
                  training_speed: float = 1000,
                  box_density: int | Tuple[int, int] = 5,
                  shuffle_positions: bool = True,
-                 max_playing_time=120,):
+                 max_playing_time=120, ):
         self.grid = grid
         self.en1_alg = en1_alg
         self.en2_alg = en2_alg
@@ -68,14 +70,10 @@ class QModel:
         for epoch in range(start_epoch, epochs + start_epoch):
             epoch_rewards = []
             for _ in tqdm(range(episodes), desc=f'Epoch {epoch}/{epochs + start_epoch}', unit='game'):
-                sum_reward = self.play_game(learning_rate=self.learning_rate,
-                                            discount=self.discount,
-                                            gamma=self.gamma,
-                                            epsilon=epsilon,
-                                            n_past_states=self.n_past_states)
+                _, sum_reward = self.play_game(epsilon=epsilon, train=True, show=False)
                 epoch_rewards.append(sum_reward)
             if show_game:
-                self.show_game(1)
+                self.play_game(epsilon=epsilon, train=False, show=True)
             print('Playing 100 games...')
             win_rate = self.win_rate(100)
             mean_reward = np.mean(epoch_rewards)
@@ -91,122 +89,74 @@ class QModel:
 
         return history
 
-    def play_game(self, learning_rate, discount, gamma, epsilon, n_past_states):
+    def play_game(self, epsilon: float, train: bool, show: bool):
         rewards = []
         past_states = []
-        game_over = False
+
+        if show:
+            pygame.init()
+            pygame.display.init()
+            clock = pygame.time.Clock()
+            SCALE = 500 / len(self.grid)
+            surface = pygame.display.set_mode((500, 500))
+            speed = 1
+        else:
+            clock = pygame.time.Clock()
+            SCALE = 1
+            surface = None
+            speed = self.training_speed
 
         game = Game(grid=self.grid,
                     player_alg=Algorithm.PLAYER,
                     en1_alg=self.en1_alg,
                     en2_alg=self.en2_alg,
                     en3_alg=self.en3_alg,
-                    scale=1,
-                    speed=self.training_speed,
+                    scale=SCALE,
+                    speed=speed,
                     show_path=False,
                     box_density=self.box_density,
                     shuffle_positions=self.shuffle_positions,
                     max_playing_time=self.max_playing_time)
 
-        start_time = time.time()
-        while not game_over:
-            if not game_over:
-                game.playing_time = time.time() - start_time
-                game_over = game.check_end_game()
-            dt = 1000 / (15 * self.training_speed)
+        if show:
+            game.init_sprites()
 
-            state = game.get_state(agent=game.player,
-                                   state_type=self.state_type,
-                                   state_range=self.state_range,
-                                   min_enemy_dist=self.min_enemy_dist)
-            if state not in self.qtable:
-                self.qtable[state] = np.round(np.random.uniform(0, 0, 6), 3)
-
-            if np.random.random() < epsilon:
-                action = np.random.choice(list(Action), 1, p=[0.2, 0.2, 0.2, 0.2, 0.0, 0.2])[0].value
-            else:
-                action = np.argmax(self.qtable[state])
-
-            past_states.insert(0, (state, action))
-
-            is_move_possible = game.player.move(Action(action), game.grid, game.bombs, game.enemy_list, game.power_ups)
-
-            for enemy in game.enemy_list:
-                if not enemy.alive:
-                    continue
-                state = game.get_state(agent=enemy,
-                                       state_type=enemy.state_type,
-                                       state_range=enemy.state_range,
-                                       min_enemy_dist=enemy.min_enemy_dist) if enemy.algorithm == Algorithm.Q else None
-                enemy.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board, game.power_ups,
-                                  state)
-
-            player_suicide, player_killed_enemy, sectors_cleared_by_player = game.update_bombs(dt)
-
-            reward = self.get_reward(game.player.alive, action, is_move_possible, player_suicide, player_killed_enemy,
-                                     sectors_cleared_by_player)
-
-            if game.player.alive:
-                future_state = game.get_state(agent=game.player,
-                                              state_type=self.state_type,
-                                              state_range=self.state_range,
-                                              min_enemy_dist=self.min_enemy_dist)
-                if future_state not in self.qtable:
-                    self.qtable[future_state] = np.round(np.random.uniform(0, 0, 6), 3)
-                future_action_value = max(self.qtable[future_state])
-
-                for i, (state, action) in enumerate(past_states):
-                    new_value = self.qtable[state][action] + learning_rate * (
-                            gamma ** i * reward + (discount * future_action_value) - self.qtable[state][action])
-                    self.qtable[state][action] = round(new_value, 3)
-
-            else:
-                for i, (state, action) in enumerate(past_states):
-                    new_value = self.qtable[state][action] + learning_rate * (
-                            gamma ** i * reward - self.qtable[state][action])
-                    self.qtable[state][action] = round(new_value, 3)
-
-            if len(past_states) > n_past_states:
-                past_states.pop()
-
-            rewards.append(reward)
-
-        return np.sum(rewards)
-
-    def show_game(self, speed):
-        pygame.init()
-        clock = pygame.time.Clock()
-        pygame.display.init()
-        WINDOW_SIZE = (500, 500)
-        SCALE = WINDOW_SIZE[0] / len(self.grid)
-        surface = pygame.display.set_mode(WINDOW_SIZE)
-
-        game = Game(self.grid,
-                    Algorithm.PLAYER, self.en1_alg, self.en2_alg, self.en3_alg,
-                    SCALE, 1, False, self.box_density,
-                    self.shuffle_positions, self.max_playing_time)
-        game.init_sprites()
         game_over = False
         start_time = time.time()
         while not game_over:
-            if not game_over:
-                game.playing_time = time.time() - start_time
-                game_over = game.check_end_game()
-            dt = clock.tick(15 * speed)
+            if show:
+                dt = clock.tick(15 * speed)
+            else:
+                dt = 1000 / (15 * self.training_speed)
 
             state = game.get_state(agent=game.player,
                                    state_type=self.state_type,
                                    state_range=self.state_range,
                                    min_enemy_dist=self.min_enemy_dist)
+            if train:
+                if state not in self.qtable:
+                    self.qtable[state] = np.round(np.random.uniform(0, 0, 6), 3)
 
-            if state not in self.qtable:
-                action = np.random.choice(list(Action), 1, p=[0.2, 0.2, 0.2, 0.2, 0.0, 0.2])[0]
+                if np.random.random() < epsilon:
+                    action = np.random.choice(list(Action), 1, p=[0.2, 0.2, 0.2, 0.2, 0.0, 0.2])[0].value
+                else:
+                    action = np.argmax(self.qtable[state])
+
+                past_states.insert(0, (state, action))
             else:
-                action = Action(np.argmax(self.qtable[state]))
+                if state not in self.qtable:
+                    action = np.random.choice(list(Action), 1, p=[0.2, 0.2, 0.2, 0.2, 0.0, 0.2])[0].value
+                else:
+                    action = np.argmax(self.qtable[state])
 
-            game.player.move(action, game.grid, game.bombs, game.enemy_list,
-                             game.power_ups)
+            # move player
+            is_move_possible = game.player.move(action=Action(action),
+                                                grid=game.grid,
+                                                bombs=game.bombs,
+                                                enemies=game.enemy_list,
+                                                power_ups=game.power_ups)
 
+            # move enemies
             for enemy in game.enemy_list:
                 if not enemy.alive:
                     continue
@@ -214,55 +164,72 @@ class QModel:
                                        state_type=enemy.state_type,
                                        state_range=enemy.state_range,
                                        min_enemy_dist=enemy.min_enemy_dist) if enemy.algorithm == Algorithm.Q else None
-                enemy.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board, game.power_ups,
-                               state)
+                enemy.choose_move(grid=game.grid,
+                                  bombs=game.bombs,
+                                  explosions=game.explosions,
+                                  agents=game.agents_on_board,
+                                  power_ups=game.power_ups,
+                                  state=state)
 
-            game.update_bombs(dt)
+            # update bombs
+            suicide, kills, destroyed_boxes = game.update_bombs(dt)
 
-            game.draw(surface)
-        pygame.display.quit()
+            # ----------------------------------------
+            if train:  # update qtable
+                reward = self.get_reward(game.player.alive,
+                                         Action(action),
+                                         is_move_possible,
+                                         suicide,
+                                         kills,
+                                         destroyed_boxes)
+
+                if game.player.alive:
+                    future_state = game.get_state(agent=game.player,
+                                                  state_type=self.state_type,
+                                                  state_range=self.state_range,
+                                                  min_enemy_dist=self.min_enemy_dist)
+                    if future_state not in self.qtable:
+                        self.qtable[future_state] = np.round(np.random.uniform(0, 0, 6), 3)
+                    future_action_value = max(self.qtable[future_state])
+
+                    for i, (state, action) in enumerate(past_states):
+                        new_value = self.qtable[state][action] + self.learning_rate * (
+                                self.gamma ** i * reward + (self.discount * future_action_value) - self.qtable[state][
+                            action])
+                        self.qtable[state][action] = round(new_value, 3)
+
+                else:
+                    for i, (state, action) in enumerate(past_states):
+                        new_value = self.qtable[state][action] + self.learning_rate * (
+                                self.gamma ** i * reward - self.qtable[state][action])
+                        self.qtable[state][action] = round(new_value, 3)
+
+                rewards.append(reward)
+            # ----------------------------------------
+
+            if len(past_states) > self.n_past_states:
+                past_states.pop()
+
+            if show:
+                game.draw(surface)
+
+
+            if not game_over:
+                game.playing_time = time.time() - start_time
+                game_over = game.check_end_game()
+
+        if show:
+            pygame.display.quit()
+            pygame.quit()
+
+        player_win = True if game.player.alive and game.playing_time <= game.max_playing_time else False
+        return player_win, np.sum(rewards)
 
     def win_rate(self, n_games: int = 100) -> float:
         wins = 0
         for _ in range(n_games):
-            game = Game(self.grid,
-                        Algorithm.PLAYER, self.en1_alg, self.en2_alg, self.en3_alg,
-                        1, self.training_speed, False, self.box_density,
-                        self.shuffle_positions, self.max_playing_time)
-            game_over = False
-            start_time = time.time()
-            while not game_over:
-                if not game_over:
-                    game.playing_time = time.time() - start_time
-                    game_over = game.check_end_game()
-                dt = 1000 / (15 * self.training_speed)
-
-                state = game.get_state(agent=game.player,
-                                       state_type=self.state_type,
-                                       state_range=self.state_range,
-                                       min_enemy_dist=self.min_enemy_dist)
-
-                if state not in self.qtable:
-                    action = np.random.choice(list(Action), 1, p=[0.2, 0.2, 0.2, 0.2, 0.0, 0.2])[0]
-                else:
-                    action = Action(np.argmax(self.qtable[state]))
-
-                game.player.move(action, game.grid, game.bombs, game.enemy_list,
-                                 game.power_ups)
-
-                for enemy in game.enemy_list:
-                    if not enemy.alive:
-                        continue
-                    state = game.get_state(agent=enemy,
-                                           state_type=enemy.state_type,
-                                           state_range=enemy.state_range,
-                                           min_enemy_dist=enemy.min_enemy_dist) if enemy.algorithm == Algorithm.Q else None
-                    enemy.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board, game.power_ups,
-                                      state)
-
-                game.update_bombs(dt)
-
-            if game.player.alive and game.playing_time <= game.max_playing_time:
+            win, _ = self.play_game(0.01, False, False)
+            if win:
                 wins += 1
         return wins / n_games
 
