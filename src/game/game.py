@@ -307,9 +307,9 @@ class Game:
 
     def get_state(self,
                   agent: Agent,
-                  state_type: str = 'circle',
-                  state_range: int = 4,
-                  min_enemy_dist: int = 10) -> str:
+                  state_type: str,
+                  state_range: int,
+                  min_enemy_dist: int) -> str:
 
         x, y = agent.pos_x, agent.pos_y
         if state_type == 'full':
