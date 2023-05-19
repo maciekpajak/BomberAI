@@ -40,13 +40,13 @@ class Agent:
             dx, dy = 1, 0
             self.direction = action.value
         elif action == Action.NO_ACTION:
-            dx, dy = 0, 0
-        elif action == Action.PLANT_BOMB and self.bomb_limit > 0:
-            bomb = self.plant_bomb(grid)
-            bombs.append(bomb)
-            grid[bomb.pos_x][bomb.pos_y] = Tile.BOMB
-        elif action == Action.PLANT_BOMB and self.bomb_limit == 0:
-            return False
+            return True
+        elif action == Action.PLANT_BOMB:
+            if self.bomb_limit > 0:
+                bomb = self.plant_bomb(grid)
+                bombs.append(bomb)
+                grid[bomb.pos_x][bomb.pos_y] = Tile.BOMB
+            return True
 
         step = grid[self.pos_x + dx][self.pos_y + dy]
         if step == Tile.SOLID or step == Tile.BOX or step == Tile.BOMB:
