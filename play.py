@@ -18,30 +18,31 @@ if __name__ == '__main__':
     pygame.init()
     pygame.display.init()
     INFO = pygame.display.Info()
-    TILE_SIZE = int(INFO.current_h * 0.05)
-    WINDOW_SIZE = (13 * TILE_SIZE, 13 * TILE_SIZE)
+    WINDOW_SIZE = (500, 500)
 
     clock = None
     player_alg = Algorithm.PLAYER
     en1_alg = Algorithm.Q
-    en2_alg = Algorithm.RANDOM
-    en3_alg = Algorithm.WANDER
+    en2_alg = Algorithm.DFS
+    en3_alg = Algorithm.DFS
     show_path = True
-    shuffle_positions = False
+    shuffle_positions = True
     surface = pygame.display.set_mode(WINDOW_SIZE)
 
-    grid_path = Path('.') / 'maps' / 'standard' / 'L.csv'
-
+    grid_path = Path('.') / 'maps' / 'standard' / 'M.csv'
     grid = np.genfromtxt(grid_path, delimiter=',')
+
+    TILE_SIZE = WINDOW_SIZE[0] / len(grid)
     g = game.Game(grid=grid,
                   player_alg=player_alg, en1_alg=en1_alg, en2_alg=en2_alg, en3_alg=en3_alg,
                   scale=TILE_SIZE,
-                  speed=1,
+                  speed=2,
                   show_path=show_path,
-                  box_density=(3,6),
+                  box_density=(7,8),
                   shuffle_positions=shuffle_positions,
-                  max_time=120,
-                  state_type='5cross')
+                  max_playing_time=120,
+                  state_type='cross',
+                  state_range=2)
     g.init_sprites()
     g.run(surface)
     pygame.display.quit()

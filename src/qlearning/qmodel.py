@@ -23,7 +23,7 @@ class QModel:
     def compile(self, get_reward: Callable, learning_rate=0.5,
                 discount=0.98,
                 epsilon=0.1,
-                de=0.001,
+                de=0.01,
                 gamma=0.9,
                 n_past_states=10,
                 state_type='5cross'):
@@ -34,7 +34,7 @@ class QModel:
         self.gamma = gamma
         self.de = de
         self.n_past_states = n_past_states
-        self.state_type=state_type
+        self.state_type = state_type
 
     def set_game(self, grid: np.ndarray,
                  en1_alg: Algorithm,
@@ -80,24 +80,32 @@ class QModel:
             mean_reward = np.mean(epoch_rewards)
             states_viewed.append(len(self.qtable))
             average_sum_of_rewards.append(mean_reward)
-            print(f'e: {epsilon:5.5f} - viewed states:{len(self.qtable):5}  - avg_sum_of_rwds:{mean_reward:5.3f} - wr:{win_rate:2.2f}')
+            print(
+                f'e: {epsilon:5.5f} - viewed states:{len(self.qtable):5}  - avg_sum_of_rwds:{mean_reward:5.3f} - wr:{win_rate:2.2f}')
             epsilon = max(0.0, epsilon - self.de)
 
             self.save(path_to_save)
-            history = pd.concat([history,pd.DataFrame([[epoch, len(self.qtable), mean_reward, win_rate]], columns=cols)])
-            history.to_csv(log_file, mode='w', index=False, header=False)
+            history = pd.DataFrame([[epoch, len(self.qtable), mean_reward, win_rate]], columns=cols)
+            history.to_csv(log_file, mode='a', index=False, header=False)
 
         return history
 
     def play_game(self, learning_rate, discount, gamma, epsilon, n_past_states):
-        clock = pygame.time.Clock()
         rewards = []
         past_states = []
         game_over = False
 
-        game = Game(self.grid, Algorithm.PLAYER, self.en1_alg, self.en2_alg, self.en3_alg,
-                    1, self.training_speed, False, self.box_density,
-                    self.shuffle_positions, self.max_playing_time)
+        game = Game(grid=self.grid,
+                    player_alg=Algorithm.PLAYER,
+                    en1_alg=self.en1_alg,
+                    en2_alg=self.en2_alg,
+                    en3_alg=self.en3_alg,
+                    scale=1,
+                    speed=self.training_speed,
+                    show_path=False,
+                    box_density=self.box_density,
+                    shuffle_positions=self.shuffle_positions,
+                    max_playing_time=self.max_playing_time)
 
         start_time = time.time()
         while not game_over:
@@ -157,7 +165,6 @@ class QModel:
         pygame.init()
         clock = pygame.time.Clock()
         pygame.display.init()
-        INFO = pygame.display.Info()
         WINDOW_SIZE = (500, 500)
         SCALE = WINDOW_SIZE[0] / len(self.grid)
         surface = pygame.display.set_mode(WINDOW_SIZE)
@@ -187,7 +194,7 @@ class QModel:
 
             for en in game.enemy_list:
                 state = game.get_state(en)
-                en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board,game.power_ups,
+                en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board, game.power_ups,
                                state)
 
             game.update_bombs(dt)
@@ -195,10 +202,9 @@ class QModel:
             game.draw(surface)
         pygame.display.quit()
 
-    def win_rate(self, n_games:int=100) -> float:
+    def win_rate(self, n_games: int = 100) -> float:
         wins = 0
         for _ in range(n_games):
-            clock = pygame.time.Clock()
             game = Game(self.grid,
                         Algorithm.PLAYER, self.en1_alg, self.en2_alg, self.en3_alg,
                         1, self.training_speed, False, self.box_density,
@@ -223,12 +229,12 @@ class QModel:
 
                 for en in game.enemy_list:
                     state = game.get_state(en)
-                    en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board,game.power_ups,
+                    en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board, game.power_ups,
                                    state)
 
                 game.update_bombs(dt)
 
-            if game.player.alive and game.playing_time <= game.max_time:
+            if game.player.alive and game.playing_time <= game.max_playing_time:
                 wins += 1
         return wins / n_games
 
