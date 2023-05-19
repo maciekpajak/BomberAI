@@ -246,10 +246,10 @@ class Game:
             bomber = agent.check_death(self.explosions)
             if agent != self.player and bomber == self.player:
                 player_killed_enemy = True
-        for e in self.explosions:
-            e.update(dt)
-            if e.time < 1:
-                self.explosions.remove(e)
+        for explosion in self.explosions:
+            explosion.update(dt)
+            if explosion.time <= 0:
+                self.explosions.remove(explosion)
         return player_killed_enemy, sectors_cleared_by_player
 
     def check_end_game(self)->bool:
