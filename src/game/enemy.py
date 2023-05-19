@@ -198,29 +198,25 @@ class Enemy(Agent):
         self.path = [[self.pos_x, self.pos_y]]
 
     def create_grid(self, grid, bombs, explosions, agents):
-        tmp_grid = np.full_like(grid, fill_value=TileType.SAFE, dtype=TileType)
+        tmp_grid = np.empty_like(grid, dtype=TileType)
 
-        for b in bombs:
-            b.get_range(grid)
-            for agent in b.sectors:
-                tmp_grid[agent[0]][agent[1]] = TileType.UNSAFE
-            tmp_grid[b.pos_x][b.pos_y] = TileType.UNREACHABLE
+        tmp_grid[grid == Tile.SOLID] = TileType.UNREACHABLE
+        tmp_grid[grid == Tile.GROUND] = TileType.SAFE
+
+        for bomb in bombs:
+            bomb.get_range(grid)
+            for sector in bomb.sectors:
+                tmp_grid[sector[0]][sector[1]] = TileType.UNSAFE
+            tmp_grid[bomb.pos_x][bomb.pos_y] = TileType.UNREACHABLE
 
         for e in explosions:
             for s in e.sectors:
                 tmp_grid[s[0]][s[1]] = TileType.UNREACHABLE
 
-        for i in range(len(grid)):
-            for j in range(len(grid[i])):
-                if grid[i][j] == Tile.SOLID:
-                    tmp_grid[i][j] = TileType.UNREACHABLE
-                elif grid[i][j] == Tile.BOX:
-                    tmp_grid[i][j] = TileType.DESTROYABLE
+        tmp_grid[grid == Tile.BOX] = TileType.DESTROYABLE
 
         for agent in agents:
-            if agent == self:
-                continue
-            elif not agent.alive:
+            if agent == self or not agent.alive:
                 continue
             else:
                 tmp_grid[agent.pos_x][agent.pos_y] = TileType.DESTROYABLE
