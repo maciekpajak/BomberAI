@@ -209,7 +209,7 @@ class Game:
                 self.player.move(action, self.grid, self.bombs, self.agents_on_board, self.power_ups)
             for en in self.enemy_list:
                 state = self.get_state(agent=en)
-                en.choose_move(self.grid, self.bombs, self.explosions, self.agents_on_board, state)
+                en.choose_move(self.grid, self.bombs, self.explosions, self.agents_on_board, self.power_ups, state)
 
             self.update_bombs(dt)
 
@@ -286,7 +286,7 @@ class Game:
 
     def get_state(self, agent: Agent):
 
-        agent_state = str(agent.bomb_limit) + str(agent.bomb_range)
+        agent_state = ''#str(agent.bomb_limit) + str(agent.bomb_range)
 
         x, y = agent.pos_x, agent.pos_y
         if self.state_type == 'full':

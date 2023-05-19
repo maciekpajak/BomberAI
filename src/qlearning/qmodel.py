@@ -121,7 +121,7 @@ class QModel:
 
             for en in game.enemy_list:
                 state = game.get_state(en)
-                en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board,
+                en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board, game.power_ups,
                                state)
 
             player_killed_enemy, sectors_cleared_by_player = game.update_bombs(dt)
@@ -187,7 +187,7 @@ class QModel:
 
             for en in game.enemy_list:
                 state = game.get_state(en)
-                en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board,
+                en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board,game.power_ups,
                                state)
 
             game.update_bombs(dt)
@@ -223,7 +223,7 @@ class QModel:
 
                 for en in game.enemy_list:
                     state = game.get_state(en)
-                    en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board,
+                    en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board,game.power_ups,
                                    state)
 
                 game.update_bombs(dt)

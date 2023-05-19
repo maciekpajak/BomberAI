@@ -34,7 +34,7 @@ class Enemy(Agent):
             self.qtable = pd.read_csv(qtable_path)
             self.qtable = self.qtable.transpose().to_dict(orient='list')
 
-    def choose_move(self, grid, bombs, explosions, agents, state):
+    def choose_move(self, grid, bombs, explosions, agents, power_ups, state):
 
         if not self.alive:
             return
@@ -51,7 +51,7 @@ class Enemy(Agent):
                 self.wander(self.create_grid(grid, bombs, explosions, agents))
 
         action = self.movement_path[0]
-        self.move(action, grid, bombs, agents, None)
+        self.move(action, grid, bombs, agents, power_ups)
         self.movement_path.pop(0)
         self.path.pop(0)
 

@@ -1,5 +1,7 @@
 from random import random
 
+import numpy as np
+
 from src.game.enums import Tile
 from src.game.enums.power_up_type import PowerUpType
 from src.game.power_up import PowerUp
@@ -46,12 +48,12 @@ class Explosion:
             if grid[i[0]][i[1]] == Tile.BOX:
                 sectors_cleared += 1
                 # uncomment to enable powerups
-                #
-                # r = random.randint(0, 9)
-                # if r == 0:
-                #     power_ups.append(PowerUp(i[0], i[1], PowerUpType.BOMB))
-                # elif r == 1:
-                #     power_ups.append(PowerUp(i[0], i[1], PowerUpType.FIRE))
+
+                r = np.random.randint(0, 8)
+                if r == 0:
+                    power_ups.append(PowerUp(i[0], i[1], PowerUpType.BOMB))
+                elif r == 1:
+                    power_ups.append(PowerUp(i[0], i[1], PowerUpType.FIRE))
 
             grid[i[0]][i[1]] = Tile.GROUND
         return sectors_cleared

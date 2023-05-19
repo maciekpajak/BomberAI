@@ -22,7 +22,7 @@ class Agent:
         self.frame = 0
         self.animation = []
 
-    def choose_move(self, grid, bombs, explosions, agents, state):
+    def choose_move(self, grid, bombs, explosions, agents, power_ups, state):
         raise NotImplementedError
 
     def move(self, action: Action, grid, bombs, enemies, power_ups) -> bool:
@@ -61,6 +61,10 @@ class Agent:
         else:
             self.pos_x += dx
             self.pos_y += dy
+
+        for pu in power_ups:
+            if pu.pos_x == self.pos_x and pu.pos_y == self.pos_y:
+                self.consume_power_up(pu, power_ups)
 
         return True
 
