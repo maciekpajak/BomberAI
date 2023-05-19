@@ -28,10 +28,7 @@ class Game:
                  show_path: bool = False,
                  box_density: int | Tuple[int, int] = 5,
                  shuffle_positions: bool = True,
-                 max_playing_time: int = 120,
-                 state_type: str = 'cross',
-                 state_range: int = '2'):
-        self.state_range = state_range
+                 max_playing_time: int = 120):
         self.enemy_list: list[Enemy] = []
         self.agents_on_board: list[Player | Enemy] = []
         self.explosions: list[Explosion] = []
@@ -44,7 +41,6 @@ class Game:
         self.speed: float = speed
         self.playing_time = 0
         self.max_playing_time = max_playing_time / speed
-        self.state_type = state_type
         self.min_enemy_dist = 10
         self.player = None
         self.shuffle_positions = shuffle_positions
@@ -216,9 +212,9 @@ class Game:
                 if not enemy.alive:
                     continue
                 state = self.get_state(agent=enemy,
-                                       state_type=self.state_type,
-                                       state_range=self.state_range,
-                                       min_enemy_dist=self.min_enemy_dist) if enemy.algorithm == Algorithm.Q else None
+                                       state_type=enemy.state_type,
+                                       state_range=enemy.state_range,
+                                       min_enemy_dist=enemy.min_enemy_dist) if enemy.algorithm == Algorithm.Q else None
                 enemy.choose_move(self.grid, self.bombs, self.explosions, self.agents_on_board, self.power_ups, state)
 
             self.update_bombs(dt)

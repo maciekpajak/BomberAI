@@ -47,7 +47,10 @@ if __name__ == "__main__":
                   epsilon=epsilon,
                   de=de,
                   gamma=gamma,
-                  n_past_states=n_past)
+                  n_past_states=n_past,
+                  state_type='cross',
+                  state_range=2,
+                  min_enemy_dist=10)
 
     grid_path = Path('.') / 'maps' / 'standard' / 'S.csv'
     grid = np.genfromtxt(grid_path, delimiter=',')
@@ -61,8 +64,7 @@ if __name__ == "__main__":
                    training_speed=training_speed,
                    box_density=(3, 6),
                    shuffle_positions=True,
-                   max_playing_time=120,
-                   state_type='cross')
+                   max_playing_time=120)
 
     history = model.fit(epochs=epochs,
                         episodes=episodes,

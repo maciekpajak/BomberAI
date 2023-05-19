@@ -47,10 +47,7 @@ class QModel:
                  training_speed: float = 1000,
                  box_density: int | Tuple[int, int] = 5,
                  shuffle_positions: bool = True,
-                 max_playing_time=120,
-                 state_type: str = 'cross',
-                 state_range: int = 2,
-                 min_enemy_dist: int = 10):
+                 max_playing_time=120,):
         self.grid = grid
         self.en1_alg = en1_alg
         self.en2_alg = en2_alg
@@ -59,10 +56,6 @@ class QModel:
         self.box_density = box_density
         self.shuffle_positions = shuffle_positions
         self.max_playing_time = max_playing_time
-
-        self.state_type = state_type
-        self.state_range = state_range
-        self.min_enemy_dist = min_enemy_dist
 
     def fit(self, epochs=10, episodes=1000, start_epoch=0, show_game=False, path_to_save='qtable.csv',
             log_file='log.csv'):
@@ -138,13 +131,15 @@ class QModel:
 
             is_move_possible = game.player.move(Action(action), game.grid, game.bombs, game.enemy_list, game.power_ups)
 
-            for en in game.enemy_list:
-                state = game.get_state(agent=en,
-                                       state_type=self.state_type,
-                                       state_range=self.state_range,
-                                       min_enemy_dist=self.min_enemy_dist)
-                en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board, game.power_ups,
-                               state)
+            for enemy in game.enemy_list:
+                if not enemy.alive:
+                    continue
+                state = game.get_state(agent=enemy,
+                                       state_type=enemy.state_type,
+                                       state_range=enemy.state_range,
+                                       min_enemy_dist=enemy.min_enemy_dist) if enemy.algorithm == Algorithm.Q else None
+                enemy.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board, game.power_ups,
+                                  state)
 
             player_suicide, player_killed_enemy, sectors_cleared_by_player = game.update_bombs(dt)
 
@@ -212,12 +207,14 @@ class QModel:
             game.player.move(action, game.grid, game.bombs, game.enemy_list,
                              game.power_ups)
 
-            for en in game.enemy_list:
-                state = game.get_state(agent=en,
-                                       state_type=self.state_type,
-                                       state_range=self.state_range,
-                                       min_enemy_dist=self.min_enemy_dist)
-                en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board, game.power_ups,
+            for enemy in game.enemy_list:
+                if not enemy.alive:
+                    continue
+                state = game.get_state(agent=enemy,
+                                       state_type=enemy.state_type,
+                                       state_range=enemy.state_range,
+                                       min_enemy_dist=enemy.min_enemy_dist) if enemy.algorithm == Algorithm.Q else None
+                enemy.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board, game.power_ups,
                                state)
 
             game.update_bombs(dt)
@@ -253,13 +250,15 @@ class QModel:
                 game.player.move(action, game.grid, game.bombs, game.enemy_list,
                                  game.power_ups)
 
-                for en in game.enemy_list:
-                    state = game.get_state(agent=en,
-                                           state_type=self.state_type,
-                                           state_range=self.state_range,
-                                           min_enemy_dist=self.min_enemy_dist)
-                    en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board, game.power_ups,
-                                   state)
+                for enemy in game.enemy_list:
+                    if not enemy.alive:
+                        continue
+                    state = game.get_state(agent=enemy,
+                                           state_type=enemy.state_type,
+                                           state_range=enemy.state_range,
+                                           min_enemy_dist=enemy.min_enemy_dist) if enemy.algorithm == Algorithm.Q else None
+                    enemy.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board, game.power_ups,
+                                      state)
 
                 game.update_bombs(dt)
 
@@ -268,5 +267,7 @@ class QModel:
         return wins / n_games
 
     def save(self, path):
-        qtable_df = pd.DataFrame(self.qtable.values(), index=self.qtable.keys())
-        qtable_df.to_csv(path)
+        df = pd.DataFrame.from_dict(self.qtable, orient='index')
+        index_name = f'{self.state_type}_{self.state_range}_{self.min_enemy_dist}'
+        df.index.rename(index_name, inplace=True)
+        df.to_csv(path)

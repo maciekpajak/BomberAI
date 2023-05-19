@@ -40,9 +40,7 @@ if __name__ == '__main__':
                   show_path=show_path,
                   box_density=(7,8),
                   shuffle_positions=shuffle_positions,
-                  max_playing_time=120,
-                  state_type='cross',
-                  state_range=2)
+                  max_playing_time=120)
     g.init_sprites()
     g.run(surface)
     pygame.display.quit()
