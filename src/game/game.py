@@ -18,7 +18,7 @@ BACKGROUND_COLOR = (107, 142, 35)
 
 class Game:
 
-    def __init__(self, grid: np.ndarray,
+    def __init__(self, grid: np.ndarray[int],
                  player_alg: Algorithm,
                  en1_alg: Algorithm,
                  en2_alg: Algorithm,
@@ -28,10 +28,12 @@ class Game:
                  show_path: bool = False,
                  box_density: int | Tuple[int, int] = 5,
                  shuffle_positions: bool = True,
-                 max_time: int = 120,
-                 state_type: str = '5cross'):
+                 max_playing_time: int = 120,
+                 state_type: str = 'cross',
+                 state_range: int = '2'):
+        self.state_range = state_range
         self.enemy_list: list[Enemy] = []
-        self.agents_on_board: list[Agent] = []
+        self.agents_on_board: list[Player | Enemy] = []
         self.explosions: list[Explosion] = []
         self.bombs: list[Bomb] = []
         self.power_ups: list[PowerUp] = []
@@ -41,7 +43,7 @@ class Game:
         self.scale: float = scale
         self.speed: float = speed
         self.playing_time = 0
-        self.max_time = max_time / speed
+        self.max_playing_time = max_playing_time / speed
         self.state_type = state_type
         self.min_enemy_dist = 10
         self.player = None
@@ -167,7 +169,7 @@ class Game:
 
         if not self.game_ended:
             font = pygame.font.SysFont('Bebas', int(self.scale))
-            time_left = self.max_time - self.playing_time
+            time_left = self.max_playing_time - self.playing_time
             tf = font.render(f"{int(time_left)} s", False, (153, 153, 255))
             surface.blit(tf, (10, 10))
 
@@ -265,8 +267,8 @@ class Game:
                 self.explosions.remove(explosion)
         return player_suicide, player_killed_enemy, sectors_cleared_by_player
 
-    def check_end_game(self)->bool:
-        if self.playing_time > self.max_time:
+    def check_end_game(self) -> bool:
+        if self.playing_time > self.max_playing_time:
             return True
 
         if self.player is not None and not self.player.alive:
@@ -303,54 +305,81 @@ class Game:
                         self.grid[y][x] = Tile.BOX
         return h, w
 
-    def get_state(self, agent: Agent) -> str:
-
-        agent_state = ''  # str(agent.bomb_limit) + str(agent.bomb_range)
+    def get_state(self,
+                  agent: Agent,
+                  state_type: str = 'circle',
+                  state_range: int = 4,
+                  min_enemy_dist: int = 10) -> str:
 
         x, y = agent.pos_x, agent.pos_y
-        if self.state_type == 'full':
+        if state_type == 'full':
             tiles = [[xx, yy] for xx in range(self.grid_w) for yy in range(self.grid_h)]
-        elif self.state_type == '9cross':
-            tiles = [[x, y], [x + 1, y], [x + 2, y], [x - 1, y], [x - 2, y], [x, y + 1], [x, y + 2], [x, y - 1],
-                     [x, y - 2]]
-        elif self.state_type == '9square':
-            raise NotImplementedError
-        elif self.state_type == '9square+cross':
-            raise NotImplementedError
-        elif self.state_type == '5cross':
-            tiles = [[x, y], [x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]
+        elif state_type == 'cross':
+            tiles = [[x, y]]
+            for i in range(1, state_range):
+                tiles.append([x, y - i])
+                tiles.append([x + i, y])
+                tiles.append([x, y + i])
+                tiles.append([x - i, y])
+        elif state_type == 'square':
+            tiles = []
+            for i in range(-state_range + 1, state_range):
+                for j in range(-state_range + 1, state_range):
+                    tiles.append([x + i, y + j])
+        elif state_type == 'circle':
+            tiles = []
+            for i in range(-state_range + 1, state_range):
+                for j in range(-state_range + 1, state_range):
+                    if abs(i) + abs(j) < state_range:
+                        tiles.append([x + i, y + j])
         else:
-            raise NotImplementedError
+            raise ValueError(" State must be one of: full, cross, square or circle")
 
+        tmp_grid = self.create_state_grid(self.grid, self.agents_on_board, self.bombs, self.explosions, self.power_ups)
         surrounding_state = ''
         for tile in tiles:
             if tile[0] < 0 or tile[0] >= len(self.grid) or tile[1] < 0 or tile[1] >= len(self.grid):
                 surrounding_state += str(Tile.SOLID.value)
             else:
-                surrounding_state += str(self.grid[tile[0]][tile[1]].value)
+                surrounding_state += str(tmp_grid[tile[0]][tile[1]].value)
 
-        bombs_state = ''
-        for tile in tiles:
-            tmp_bomb_state = '00'
-            for bomb in self.bombs:
-                if bomb.pos_x == tile[0] and bomb.pos_y == tile[1]:
-                    tmp_bomb_state = '1' + str(bomb.frame + 1)
-            bombs_state += tmp_bomb_state
-
-        closest_enemy = agent
+        dist_y, dist_x = 0, 0
         for enemy in self.agents_on_board:
             if enemy == agent:
                 continue
             dist = abs(enemy.pos_y - y) + abs(enemy.pos_x - x)  # manhattan dist
-            if dist < self.min_enemy_dist:
+            if dist < min_enemy_dist:
                 min_enemy_dist = dist
-                closest_enemy = enemy
+                dist_y = enemy.pos_y - y
+                dist_x = enemy.pos_x - x
+        closest_enemy_state = f'{dist_x:+03}{dist_y:+03}'
 
-        y_prefix = 0 if closest_enemy.pos_y - y >= 0 else 1
-        x_prefix = 0 if closest_enemy.pos_x - x >= 0 else 1
-        dist_y = abs(closest_enemy.pos_y - y)
-        dist_x = abs(closest_enemy.pos_x - x)
-        closest_enemy_state = ''.join([str(x_prefix), str(dist_x).zfill(2), str(y_prefix), str(dist_y).zfill(2)])
-
-        state = agent_state + surrounding_state + bombs_state + closest_enemy_state
+        state = surrounding_state + closest_enemy_state
         return state
+
+    @staticmethod
+    def create_state_grid(grid: np.ndarray[Tile],
+                          agents: list[Agent],
+                          bombs: list[Bomb],
+                          explosions: list[Explosion],
+                          power_ups: list[PowerUp]):
+        tmp_grid = np.empty_like(grid, dtype=Tile)
+        tmp_grid[grid == Tile.SOLID] = Tile.SOLID
+        tmp_grid[grid == Tile.GROUND] = Tile.GROUND
+
+        for bomb in bombs:
+            if bomb.frame == 2:
+                tmp_grid[bomb.pos_x][bomb.pos_y] = Tile.BOMB_ABOUT_TO_EXPLODE
+            else:
+                tmp_grid[bomb.pos_x][bomb.pos_y] = Tile.BOMB
+
+        for e in explosions:
+            for s in e.sectors:
+                tmp_grid[s[0]][s[1]] = Tile.EXPLOSION
+
+        for power_up in power_ups:
+            tmp_grid[power_up.pos_x][power_up.pos_y] = Tile.POWER_UP
+
+        tmp_grid[grid == Tile.BOX] = Tile.BOX
+
+        return tmp_grid
