@@ -6,6 +6,8 @@ import pandas as pd
 import pygame
 import random
 
+from src.game.explosion import Explosion
+from src.game.power_up import PowerUp
 from src.game.enums import Tile
 from src.game.enums.action import Action
 from src.game.agent import Agent
@@ -24,7 +26,7 @@ class TileType(Enum):
 class Enemy(Agent):
     dire = [[1, 0, Action.RIGHT], [0, 1, Action.DOWN], [-1, 0, Action.LEFT], [0, -1, Action.UP]]
 
-    def __init__(self, x, y, alg, speed):
+    def __init__(self, x: int, y: int, alg: Algorithm, speed: float):
         super().__init__(x, y, speed)
         self.path = []
         self.movement_path = []
@@ -34,7 +36,13 @@ class Enemy(Agent):
             self.qtable = pd.read_csv(qtable_path)
             self.qtable = self.qtable.transpose().to_dict(orient='list')
 
-    def choose_move(self, grid, bombs, explosions, agents, power_ups, state):
+    def choose_move(self,
+                    grid: np.ndarray[Tile],
+                    bombs: list[Bomb],
+                    explosions: list[Explosion],
+                    agents: list[Agent],
+                    power_ups: list[PowerUp],
+                    state: str):
 
         if not self.alive:
             return

@@ -1,5 +1,4 @@
 import time
-from pathlib import Path
 from typing import Tuple
 
 import numpy as np
@@ -29,28 +28,32 @@ class Game:
                  show_path: bool = False,
                  box_density: int | Tuple[int, int] = 5,
                  shuffle_positions: bool = True,
-                 max_time=120,
-                 state_type='5cross'):
+                 max_time: int = 120,
+                 state_type: str = '5cross'):
         self.enemy_list: list[Enemy] = []
         self.agents_on_board: list[Agent] = []
         self.explosions: list[Explosion] = []
         self.bombs: list[Bomb] = []
         self.power_ups: list[PowerUp] = []
         self.game_ended: bool = False
-        self.grid = None
         self.grid_h, self.grid_w = self.generate_map(grid, box_density=box_density)
         self.show_path = show_path
-        self.scale = scale
-        self.speed = speed
+        self.scale: float = scale
+        self.speed: float = speed
         self.playing_time = 0
-        self.max_time  = max_time / speed
+        self.max_time = max_time / speed
         self.state_type = state_type
         self.min_enemy_dist = 10
         self.player = None
         self.shuffle_positions = shuffle_positions
         self.init_players(player_alg, en1_alg, en2_alg, en3_alg, shuffle_positions)
 
-    def init_players(self, player_alg, en1_alg, en2_alg, en3_alg, shuffle_positions=True):
+    def init_players(self,
+                     player_alg: Algorithm,
+                     en1_alg: Algorithm,
+                     en2_alg: Algorithm,
+                     en3_alg: Algorithm,
+                     shuffle_positions: bool = True) -> None:
         left_up = [1, 1]
         left_bottom = [self.grid_h - 2, 1]
         right_up = [1, self.grid_w - 2]
@@ -86,7 +89,7 @@ class Game:
             self.enemy_list.append(en0)
             self.agents_on_board.append(en0)
 
-    def init_sprites(self):
+    def init_sprites(self) -> None:
         self.grass_img = pygame.image.load('images/terrain/grass.png')
         self.grass_img = pygame.transform.scale(self.grass_img, (self.scale, self.scale))
 
@@ -126,7 +129,7 @@ class Game:
 
         self.power_ups_images = [self.power_up_bomb_img, self.power_up_fire_img]
 
-    def draw(self, surface):
+    def draw(self, surface: pygame.Surface | pygame.SurfaceType):
         surface.fill(BACKGROUND_COLOR)
         for i in range(len(self.grid)):
             for j in range(len(self.grid[i])):
@@ -175,14 +178,14 @@ class Game:
 
         pygame.display.update()
 
-    def run(self, surface):
+    def run(self, surface: pygame.Surface | pygame.SurfaceType):
         clock = pygame.time.Clock()
 
         running = True
         self.draw(surface)
         start_time = time.time()
         while running:
-            dt = clock.tick(15*self.speed)
+            dt = clock.tick(15 * self.speed)
 
             action = Action.NO_ACTION
             if self.player is not None and self.player.alive:
@@ -224,20 +227,20 @@ class Game:
         self.agents_on_board.clear()
         self.power_ups.clear()
 
-    def update_bombs(self, dt):
+    def update_bombs(self, dt: float) -> Tuple[bool, int]:
         sectors_cleared_by_player = None
         player_killed_enemy = False
-        for b in self.bombs:
-            b.update(dt)
-            self.grid[b.pos_x][b.pos_y] = Tile.BOMB
-            if b.time_to_explode <= 0:
-                b.bomber.bomb_limit += 1
-                self.grid[b.pos_x][b.pos_y] = Tile.GROUND
-                exp_temp = Explosion(b.pos_x, b.pos_y, b.range, self.speed)
-                exp_temp.explode(self.grid, self.bombs, b, self.power_ups)
+        for bomb in self.bombs:
+            bomb.update(dt)
+            self.grid[bomb.pos_x][bomb.pos_y] = Tile.BOMB
+            if bomb.time_to_explode <= 0:
+                bomb.bomber.bomb_limit += 1
+                self.grid[bomb.pos_x][bomb.pos_y] = Tile.GROUND
+                exp_temp = Explosion(bomb.pos_x, bomb.pos_y, bomb.range, self.speed)
+                exp_temp.explode(self.grid, self.bombs, bomb, self.power_ups)
                 sectors_cleared = exp_temp.clear_sectors(self.grid, self.power_ups)
                 self.explosions.append(exp_temp)
-                if b.bomber == self.player:
+                if bomb.bomber == self.player:
                     sectors_cleared_by_player = sectors_cleared
         for agent in self.agents_on_board:
             bomber = agent.check_death(self.explosions)
@@ -249,7 +252,7 @@ class Game:
                 self.explosions.remove(e)
         return player_killed_enemy, sectors_cleared_by_player
 
-    def check_end_game(self):
+    def check_end_game(self)->bool:
         if self.playing_time > self.max_time:
             return True
 
@@ -262,13 +265,16 @@ class Game:
 
         return True
 
-    def generate_map(self, grid: np.ndarray, box_density: int | Tuple[int, int]= 5, no_box_area: int = 2) -> Tuple[int, int]:
-        self.grid = np.empty_like(grid, dtype=Tile)
+    def generate_map(self,
+                     grid: np.ndarray[int],
+                     box_density: int | Tuple[int, int] = 5,
+                     no_box_area: int = 2) -> Tuple[int, int]:
+        self.grid: np.ndarray[Tile] = np.empty_like(grid, dtype=Tile)
         self.grid[grid == Tile.SOLID.value] = Tile.SOLID
         self.grid[grid == Tile.GROUND.value] = Tile.GROUND
         h, w = self.grid.shape
 
-        if isinstance(box_density,Tuple):
+        if isinstance(box_density, Tuple):
             box_density = random.randint(box_density[0], box_density[1])
         elif isinstance(box_density, int):
             box_density = box_density
@@ -284,9 +290,9 @@ class Game:
                         self.grid[y][x] = Tile.BOX
         return h, w
 
-    def get_state(self, agent: Agent):
+    def get_state(self, agent: Agent) -> str:
 
-        agent_state = ''#str(agent.bomb_limit) + str(agent.bomb_range)
+        agent_state = ''  # str(agent.bomb_limit) + str(agent.bomb_range)
 
         x, y = agent.pos_x, agent.pos_y
         if self.state_type == 'full':

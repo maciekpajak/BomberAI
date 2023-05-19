@@ -1,11 +1,18 @@
+import numpy as np
+
 from src.game.enums.tile import Tile
 
 
 class Bomb:
-    frame = 0
-    speed = 1
 
-    def __init__(self, range, x, y, map, bomber, speed):
+    def __init__(self,
+                 range: int,
+                 x: int,
+                 y: int,
+                 map: np.ndarray[Tile],
+                 bomber,
+                 speed: float) -> None:
+        self.frame = 0
         self.range = range
         self.pos_x = x
         self.pos_y = y
@@ -15,7 +22,8 @@ class Bomb:
         self.sectors = []
         self.get_range(map)
 
-    def update(self, dt):
+    def update(self,
+               dt: float) -> None:
 
         self.time_to_explode = self.time_to_explode - dt
 
@@ -24,7 +32,8 @@ class Bomb:
         elif self.time_to_explode < (1000 / self.speed):
             self.frame = 1
 
-    def get_range(self, grid):
+    def get_range(self,
+                  grid: np.ndarray[Tile]) -> None:
 
         self.sectors.append([self.pos_x, self.pos_y])
 

@@ -1,7 +1,7 @@
-import math
-
+import numpy as np
 import pygame
 
+from src.game.power_up import PowerUp
 from src.game.explosion import Explosion
 from src.game.enums.action import Action
 from src.game.bomb import Bomb
@@ -22,10 +22,20 @@ class Agent:
         self.frame = 0
         self.animation = []
 
-    def choose_move(self, grid, bombs, explosions, agents, power_ups, state):
+    def choose_move(self,
+                    grid: np.ndarray[Tile],
+                    bombs: list[Bomb],
+                    explosions: list[Explosion],
+                    agents: list,
+                    power_ups: list[PowerUp],
+                    state: str):
         raise NotImplementedError
 
-    def move(self, action: Action, grid, bombs, enemies, power_ups) -> bool:
+    def move(self, action: Action,
+             grid: np.ndarray[Tile],
+             bombs: list[Bomb],
+             enemies: list,
+             power_ups: list[PowerUp]) -> bool:
         dx, dy = 0, 0
         if action == Action.UP:
             dx, dy = 0, -1
@@ -48,39 +58,45 @@ class Agent:
                 grid[bomb.pos_x][bomb.pos_y] = Tile.BOMB
             return True
 
-        step = grid[self.pos_x + dx][self.pos_y + dy]
-
+        # prevent passing through enemies
         for enemy in enemies:
             if enemy == self or not enemy.alive:
                 continue
             if enemy.pos_x == self.pos_x + dx and enemy.pos_y == self.pos_y + dy:
                 return False
 
-        if step == Tile.SOLID or step == Tile.BOX or step == Tile.BOMB:
+        # make step
+        step = grid[self.pos_x + dx][self.pos_y + dy]
+        if step == Tile.SOLID or step == Tile.BOX or step == Tile.BOMB: # cant pass through obstacles
             return False
-        else:
+        else: # move
             self.pos_x += dx
             self.pos_y += dy
 
+        # pick up power ups
         for pu in power_ups:
             if pu.pos_x == self.pos_x and pu.pos_y == self.pos_y:
                 self.consume_power_up(pu, power_ups)
 
         return True
 
-    def plant_bomb(self, grid):
+    def plant_bomb(self,
+                   grid: np.ndarray[Tile]) -> Bomb:
         b = Bomb(self.bomb_range, self.pos_x, self.pos_y, grid, self, self.speed)
         self.bomb_limit -= 1
         return b
 
-    def check_death(self, explosions: list[Explosion]):
+    def check_death(self,
+                    explosions: list[Explosion]):
         for explosion in explosions:
             for sector in explosion.sectors:
                 if self.pos_x == sector[0] and self.pos_y == sector[1] and self.alive:
                     self.alive = False
                     return explosion.bomber
 
-    def consume_power_up(self, power_up, power_ups):
+    def consume_power_up(self,
+                         power_up: PowerUp,
+                         power_ups: list[PowerUp]) -> None:
         if power_up.type == PowerUpType.BOMB:
             self.bomb_limit += 1
         elif power_up.type == PowerUpType.FIRE:
@@ -88,61 +104,27 @@ class Agent:
 
         power_ups.remove(power_up)
 
-    def load_animations(self, image_path, scale: float):
-        front = []
-        back = []
-        left = []
-        right = []
-        resize_width = scale
-        resize_height = scale
+    def load_animations(self,
+                        image_path: str,
+                        scale: float) -> None:
+        front, back, left, right = [], [], [], []
+        resize_width, resize_height = scale, scale
 
-        f1 = pygame.image.load(image_path + 'f0.png')
-        f2 = pygame.image.load(image_path + 'f1.png')
-        f3 = pygame.image.load(image_path + 'f2.png')
+        front.append(pygame.transform.scale(pygame.image.load(image_path + 'f0.png'), (resize_width, resize_height)))
+        front.append(pygame.transform.scale(pygame.image.load(image_path + 'f1.png'), (resize_width, resize_height)))
+        front.append(pygame.transform.scale(pygame.image.load(image_path + 'f2.png'), (resize_width, resize_height)))
 
-        f1 = pygame.transform.scale(f1, (resize_width, resize_height))
-        f2 = pygame.transform.scale(f2, (resize_width, resize_height))
-        f3 = pygame.transform.scale(f3, (resize_width, resize_height))
+        right.append(pygame.transform.scale(pygame.image.load(image_path + 'r0.png'), (resize_width, resize_height)))
+        right.append(pygame.transform.scale(pygame.image.load(image_path + 'r1.png'), (resize_width, resize_height)))
+        right.append(pygame.transform.scale(pygame.image.load(image_path + 'r2.png'), (resize_width, resize_height)))
 
-        front.append(f1)
-        front.append(f2)
-        front.append(f3)
+        back.append(pygame.transform.scale(pygame.image.load(image_path + 'b0.png'), (resize_width, resize_height)))
+        back.append(pygame.transform.scale(pygame.image.load(image_path + 'b1.png'), (resize_width, resize_height)))
+        back.append(pygame.transform.scale(pygame.image.load(image_path + 'b2.png'), (resize_width, resize_height)))
 
-        r1 = pygame.image.load(image_path + 'r0.png')
-        r2 = pygame.image.load(image_path + 'r1.png')
-        r3 = pygame.image.load(image_path + 'r2.png')
-
-        r1 = pygame.transform.scale(r1, (resize_width, resize_height))
-        r2 = pygame.transform.scale(r2, (resize_width, resize_height))
-        r3 = pygame.transform.scale(r3, (resize_width, resize_height))
-
-        right.append(r1)
-        right.append(r2)
-        right.append(r3)
-
-        b1 = pygame.image.load(image_path + 'b0.png')
-        b2 = pygame.image.load(image_path + 'b1.png')
-        b3 = pygame.image.load(image_path + 'b2.png')
-
-        b1 = pygame.transform.scale(b1, (resize_width, resize_height))
-        b2 = pygame.transform.scale(b2, (resize_width, resize_height))
-        b3 = pygame.transform.scale(b3, (resize_width, resize_height))
-
-        back.append(b1)
-        back.append(b2)
-        back.append(b3)
-
-        l1 = pygame.image.load(image_path + 'l0.png')
-        l2 = pygame.image.load(image_path + 'l1.png')
-        l3 = pygame.image.load(image_path + 'l2.png')
-
-        l1 = pygame.transform.scale(l1, (resize_width, resize_height))
-        l2 = pygame.transform.scale(l2, (resize_width, resize_height))
-        l3 = pygame.transform.scale(l3, (resize_width, resize_height))
-
-        left.append(l1)
-        left.append(l2)
-        left.append(l3)
+        left.append(pygame.transform.scale(pygame.image.load(image_path + 'l0.png'), (resize_width, resize_height)))
+        left.append(pygame.transform.scale(pygame.image.load(image_path + 'l1.png'), (resize_width, resize_height)))
+        left.append(pygame.transform.scale(pygame.image.load(image_path + 'l2.png'), (resize_width, resize_height)))
 
         self.animation.append(back)
         self.animation.append(right)
