@@ -33,12 +33,12 @@ def get_reward(player_alive, action, is_move_possible, player_suicide, player_ki
 if __name__ == "__main__":
     model = QModel()
     epsilon = 0.1
-    de = 0.001
+    de = 0.01
     discount = 0.98
     lr = 0.01
     gamma = 0.99
     n_past = 50
-    epochs = 100
+    epochs = 10
     episodes = 10
     training_speed = 100
     model.compile(get_reward=get_reward,
@@ -48,8 +48,8 @@ if __name__ == "__main__":
                   de=de,
                   gamma=gamma,
                   n_past_states=n_past,
-                  state_type='cross',
-                  state_range=2,
+                  state_type='circle',
+                  state_range=3,
                   min_enemy_dist=10)
 
     grid_path = Path('.') / 'maps' / 'standard' / 'S.csv'
@@ -70,5 +70,5 @@ if __name__ == "__main__":
                         episodes=episodes,
                         start_epoch=0,
                         show_game=True,
-                        path_to_save='qtables/tests/test5/qtable.csv',
-                        log_file='qtables/tests/test5/log.csv')
+                        path_to_save='qtables/tests/test1/qtable.csv',
+                        log_file='qtables/tests/test1/log.csv')

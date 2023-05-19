@@ -56,10 +56,10 @@ class Explosion:
                       grid: np.ndarray[Tile],
                       power_ups: list[PowerUp]) -> int:
 
-        sectors_cleared = 0
+        destroyed_boxes = 0
         for i in self.sectors:
             if grid[i[0]][i[1]] == Tile.BOX:
-                sectors_cleared += 1
+                destroyed_boxes += 1
                 # power up drop
                 r = np.random.randint(0, 8)
                 if r == 0: # 12,5% to drop bomb powerup
@@ -68,7 +68,7 @@ class Explosion:
                     power_ups.append(PowerUp(i[0], i[1], PowerUpType.FIRE))
 
             grid[i[0]][i[1]] = Tile.GROUND
-        return sectors_cleared
+        return destroyed_boxes
 
     def update(self,
                dt: float) -> None:

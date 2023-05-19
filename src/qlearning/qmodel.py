@@ -16,21 +16,25 @@ class QModel:
     def __init__(self):
         self.qtable = {}
 
-    def load(self, path):
-        qtable = pd.read_csv(path)
+    def load(self, path: str) -> None:
+        qtable = pd.read_csv(path, index_col=0)
+        index_name = qtable.index.name
         self.qtable = qtable.transpose().to_dict(orient='list')
+        self.state_type, self.state_range, self.min_enemy_dist = index_name.split(sep='_')
+        self.state_range = int(self.state_range)
+        self.min_enemy_dist = int(self.min_enemy_dist)
 
     def compile(self,
                 get_reward: Callable[[bool, Action, bool, bool, int, int], float],
-                learning_rate=0.5,
+                state_type: str,
+                state_range: int,
+                min_enemy_dist: int,
+                learning_rate=0.1,
                 discount=0.98,
                 epsilon=0.1,
                 de=0.01,
                 gamma=0.9,
-                n_past_states=10,
-                state_type: str = 'cross',
-                state_range: int = 2,
-                min_enemy_dist: int = 10):
+                n_past_states=10) -> None:
         self.get_reward = get_reward
         self.learning_rate = learning_rate
         self.discount = discount
@@ -46,10 +50,10 @@ class QModel:
                  en1_alg: Algorithm,
                  en2_alg: Algorithm,
                  en3_alg: Algorithm,
-                 training_speed: float = 1000,
+                 training_speed: float = 1,
                  box_density: int | Tuple[int, int] = 5,
                  shuffle_positions: bool = True,
-                 max_playing_time=120, ):
+                 max_playing_time=120) -> None:
         self.grid = grid
         self.en1_alg = en1_alg
         self.en2_alg = en2_alg
@@ -59,37 +63,45 @@ class QModel:
         self.shuffle_positions = shuffle_positions
         self.max_playing_time = max_playing_time
 
-    def fit(self, epochs=10, episodes=1000, start_epoch=0, show_game=False, path_to_save='qtable.csv',
-            log_file='log.csv'):
-        epsilon = self.epsilon
-        cols = ['epoch', 'states_viewed', 'average_sum_of_rewards', 'win_rate']
+    def fit(self,
+            epochs: int = 10,
+            episodes: int = 1000,
+            start_epoch: int = 0,
+            show_game: bool = False,
+            path_to_save: str = 'qtable.csv',
+            log_file: str = 'log.csv') -> pd.DataFrame:
+        cols = ['epoch', 'epsilon', 'states_viewed', 'average_sum_of_rewards', 'win_rate']
         history = pd.DataFrame(columns=cols)
         history.to_csv(log_file, mode='w', index=False, header=cols)
-        average_sum_of_rewards = []
-        states_viewed = []
+
+        epsilon = self.epsilon
+
         for epoch in range(start_epoch, epochs + start_epoch):
             epoch_rewards = []
-            for _ in tqdm(range(episodes), desc=f'Epoch {epoch}/{epochs + start_epoch}', unit='game'):
+            for _ in tqdm(range(episodes), desc=f'Epoch {epoch + 1}/{epochs + start_epoch}', unit='game'):
                 _, sum_reward = self.play_game(epsilon=epsilon, train=True, show=False)
                 epoch_rewards.append(sum_reward)
+
             if show_game:
                 self.play_game(epsilon=epsilon, train=False, show=True)
-            print('Playing 100 games...')
+
             win_rate = self.win_rate(100)
+
             mean_reward = np.mean(epoch_rewards)
-            states_viewed.append(len(self.qtable))
-            average_sum_of_rewards.append(mean_reward)
-            print(
-                f'e: {epsilon:5.5f} - viewed states:{len(self.qtable):5}  - avg_sum_of_rwds:{mean_reward:5.3f} - wr:{win_rate:2.2f}')
             epsilon = max(0.0, epsilon - self.de)
 
+            print(f'epsilon: {epsilon:5.5f} - viewed states:{len(self.qtable):5} - avg_sum_of_rewards:{mean_reward:5.1f} - win_rate:{win_rate:2.2f}')
+
             self.save(path_to_save)
-            history = pd.DataFrame([[epoch, len(self.qtable), mean_reward, win_rate]], columns=cols)
+            history = pd.DataFrame([[epoch, epsilon, len(self.qtable), mean_reward, win_rate]], columns=cols)
             history.to_csv(log_file, mode='a', index=False, header=False)
 
         return history
 
-    def play_game(self, epsilon: float, train: bool, show: bool):
+    def play_game(self,
+                  epsilon: float,
+                  train: bool,
+                  show: bool) -> Tuple[bool, float]:
         rewards = []
         past_states = []
 
@@ -213,7 +225,6 @@ class QModel:
             if show:
                 game.draw(surface)
 
-
             if not game_over:
                 game.playing_time = time.time() - start_time
                 game_over = game.check_end_game()
@@ -223,17 +234,17 @@ class QModel:
             pygame.quit()
 
         player_win = True if game.player.alive and game.playing_time <= game.max_playing_time else False
-        return player_win, np.sum(rewards)
+        return player_win, float(np.sum(rewards))
 
     def win_rate(self, n_games: int = 100) -> float:
         wins = 0
-        for _ in range(n_games):
+        for _ in tqdm(range(n_games), desc=f'Test on {n_games} games', unit='game'):
             win, _ = self.play_game(0.01, False, False)
             if win:
                 wins += 1
         return wins / n_games
 
-    def save(self, path):
+    def save(self, path: str) -> None:
         df = pd.DataFrame.from_dict(self.qtable, orient='index')
         index_name = f'{self.state_type}_{self.state_range}_{self.min_enemy_dist}'
         df.index.rename(index_name, inplace=True)
