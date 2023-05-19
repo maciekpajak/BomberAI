@@ -49,6 +49,13 @@ class Agent:
             return True
 
         step = grid[self.pos_x + dx][self.pos_y + dy]
+
+        for enemy in enemies:
+            if enemy == self or not enemy.alive:
+                continue
+            if enemy.pos_x == self.pos_x + dx and enemy.pos_y == self.pos_y + dy:
+                return False
+
         if step == Tile.SOLID or step == Tile.BOX or step == Tile.BOMB:
             return False
         else:
