@@ -10,14 +10,16 @@ from src.game import Algorithm, Action
 from src.qlearning.qmodel import QModel
 
 
-def get_reward(player_alive, action, is_move_possible, player_killed_enemy, sectors_cleared_by_player):
-    r = -1
+def get_reward(player_alive, action, is_move_possible, player_suicide, player_killed_enemy, sectors_cleared_by_player):
+    r = 0
     if action == Action.NO_ACTION:
         r -= 3
     if not is_move_possible:
         r -= 5
-    if not player_alive:
+    if not player_alive and not player_suicide:
         r -= 300
+    if not player_alive and player_suicide:
+        r -= 500
     if player_killed_enemy:
         r += 500
     if sectors_cleared_by_player is not None:

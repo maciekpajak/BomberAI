@@ -124,9 +124,9 @@ class QModel:
                 en.choose_move(game.grid, game.bombs, game.explosions, game.agents_on_board, game.power_ups,
                                state)
 
-            player_killed_enemy, sectors_cleared_by_player = game.update_bombs(dt)
+            player_suicide, player_killed_enemy, sectors_cleared_by_player = game.update_bombs(dt)
 
-            reward = self.get_reward(game.player.alive, action, is_move_possible, player_killed_enemy,
+            reward = self.get_reward(game.player.alive, action, is_move_possible, player_suicide, player_killed_enemy,
                                      sectors_cleared_by_player)
 
             if game.player.alive:

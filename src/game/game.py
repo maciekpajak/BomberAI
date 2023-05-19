@@ -210,9 +210,14 @@ class Game:
 
             if self.player is not None:
                 self.player.move(action, self.grid, self.bombs, self.agents_on_board, self.power_ups)
-            for en in self.enemy_list:
-                state = self.get_state(agent=en)
-                en.choose_move(self.grid, self.bombs, self.explosions, self.agents_on_board, self.power_ups, state)
+            for enemy in self.enemy_list:
+                if not enemy.alive:
+                    continue
+                state = self.get_state(agent=enemy,
+                                       state_type=self.state_type,
+                                       state_range=self.state_range,
+                                       min_enemy_dist=self.min_enemy_dist) if enemy.algorithm == Algorithm.Q else None
+                enemy.choose_move(self.grid, self.bombs, self.explosions, self.agents_on_board, self.power_ups, state)
 
             self.update_bombs(dt)
 
@@ -227,9 +232,10 @@ class Game:
         self.agents_on_board.clear()
         self.power_ups.clear()
 
-    def update_bombs(self, dt: float) -> Tuple[bool, int]:
+    def update_bombs(self, dt: float) -> Tuple[bool, int, int]:
         sectors_cleared_by_player = None
-        player_killed_enemy = False
+        player_killed_enemy = 0
+        player_suicide = False
         for bomb in self.bombs:
             bomb.update(dt)
             self.grid[bomb.pos_x][bomb.pos_y] = Tile.BOMB
@@ -243,14 +249,21 @@ class Game:
                 if bomb.bomber == self.player:
                     sectors_cleared_by_player = sectors_cleared
         for agent in self.agents_on_board:
-            bomber = agent.check_death(self.explosions)
-            if agent != self.player and bomber == self.player:
-                player_killed_enemy = True
+            bomber = agent.check_death(self.explosions)  # if no kill bomber is None
+            if bomber:
+                if agent != self.player and bomber == self.player:
+                    player_killed_enemy += 1
+                elif agent == self.player and bomber == self.player:
+                    player_suicide = True
+            # remove dead agents
+            if not agent.alive:
+                self.agents_on_board.remove(agent)
+
         for explosion in self.explosions:
             explosion.update(dt)
             if explosion.time <= 0:
                 self.explosions.remove(explosion)
-        return player_killed_enemy, sectors_cleared_by_player
+        return player_suicide, player_killed_enemy, sectors_cleared_by_player
 
     def check_end_game(self)->bool:
         if self.playing_time > self.max_time:
