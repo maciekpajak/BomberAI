@@ -7,3 +7,6 @@ class Algorithm(Enum):
     DIJKSTRA = 1
     PLAYER = 2
     NONE = 3
+    RANDOM = 4
+    Q = 5
+    WANDER = 6

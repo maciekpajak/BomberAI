@@ -48,11 +48,11 @@ class MyTestCase(unittest.TestCase):
         en = game.enemy_list[1]
         game.bombs.append(en.plant_bomb(game.GRID_BASE))
         game.update_bombs(game.GRID_BASE, 1500)
-        self.assertEqual(True, en.life)
+        self.assertEqual(True, en.alive)
         self.assertEqual(0, len(game.explosions))
 
         game.update_bombs(game.GRID_BASE, 1501)
-        self.assertEqual(False, en.life)
+        self.assertEqual(False, en.alive)
         self.assertEqual(0, len(game.explosions))
 
 

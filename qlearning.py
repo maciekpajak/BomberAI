@@ -1,49 +1,67 @@
 import time
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pygame
+from tqdm import tqdm
 
-from src.qlearning.QGameLoop import GameLoop
+from src.game import Algorithm, Action
+from src.qlearning.qmodel import QModel
 
+
+def get_reward(player_alive, action, is_move_possible, suicide, kills, destroyed_boxes):
+    r = -0.1
+    if action == Action.NO_ACTION:
+        r -= 3
+    if not is_move_possible:
+        r -= 5
+    if not player_alive and not suicide:
+        r -= 50
+    if not player_alive and suicide:
+        r -= 100
+    r += kills * 200
+    r += destroyed_boxes * 10
+    return r
 
 
 if __name__ == "__main__":
-    pygame.init()
-
-    mean_score = []
-    epsilon = 0.01
-    de = 0.00001
+    model = QModel()
+    epsilon = 0.1
+    de = 0.01
     discount = 0.98
-    lr = 0.01
-    epochs = 1000
-    qtable = {}
-    speed = 100
-    states_viewed = []
+    lr = 0.1
+    gamma = 0.99
+    n_past = 50
+    epochs = 10
+    episodes = 100
+    model.compile(get_reward=get_reward,
+                  learning_rate=lr,
+                  discount=discount,
+                  epsilon=epsilon,
+                  de=de,
+                  gamma=gamma,
+                  n_past_states=n_past,
+                  state_type='circle',
+                  state_range=3,
+                  min_enemy_dist=10)
 
-    show_game = True
+    grid_path = Path('.') / 'maps' / 'standard' / 'M.csv'
+    grid = np.genfromtxt(grid_path, delimiter=',')
+    en1_alg = Algorithm.WANDER
+    en2_alg = Algorithm.WANDER
+    en3_alg = Algorithm.RANDOM
+    model.set_game(grid=grid,
+                   en1_alg=en1_alg,
+                   en2_alg=en2_alg,
+                   en3_alg=en3_alg,
+                   box_density=(3, 6),
+                   shuffle_positions=True,
+                   max_playing_time=120)
 
-    for epoch in range(epochs):
-        print(f'Epoch {epoch}/{epochs}', end=' ')
-        if epoch % 100 == 0:
-            pygame.display.init()
-            INFO = pygame.display.Info()
-            TILE_SIZE = int(INFO.current_h * 0.05)
-            WINDOW_SIZE = (13 * TILE_SIZE, 13 * TILE_SIZE)
-            surface = pygame.display.set_mode(WINDOW_SIZE)
-            game = GameLoop(speed=3, show_game=True, surface=surface, tile_size=TILE_SIZE)
-            mean_reward = game.run(qtable=qtable, learning_rate=lr, discount=discount, epsilon=epsilon)
-            pygame.display.quit()
-        else:
-            game = GameLoop(speed, show_game=False )
-            mean_reward = game.run(qtable=qtable, learning_rate=lr, discount=discount, epsilon=epsilon)
-
-        mean_score.append(mean_reward)
-        epsilon = max(0.0, epsilon-de)
-        states_viewed.append(len(qtable))
-        print(f'e: {epsilon:5.5f} - viewed states:{len(qtable):5}  - mer:{mean_reward:5.3f}')
-
-
-    qtable_df = pd.DataFrame(qtable.values(), index=qtable.keys())
-    qtable_df = qtable_df.rename_axis(index='State', columns="Action")
-    qtable_df.to_csv(f'./qtables/9cross_space/qtable_epochs{epochs}_lr{lr}.csv')
+    history = model.fit(epochs=epochs,
+                        episodes=episodes,
+                        start_epoch=0,
+                        show_game=True,
+                        path_to_save='qtables/tests/qtable.csv',
+                        log_file='qtables/tests/log.csv')

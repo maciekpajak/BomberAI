@@ -7,7 +7,8 @@ common = [
     'pygame_menu',
     'python-decouple',
     'numpy',
-    'pandas'
+    'pandas',
+    'tqdm'
 ]
 
 windows = [

@@ -42,11 +42,6 @@ class Menu:
 
     def __init__(self):
         return
-        # self.player = Player()
-        # self.enemy1 = Enemy()
-        # self.enemy2 = Enemy()
-        # self.enemy3 = Enemy()
-        # self.map = None
 
     def change_path(self, *args):
         self.show_path = args[1]
@@ -66,7 +61,7 @@ class Menu:
     def run_game(self):
         g = game.Game( self.show_path, self.player_alg, self.en1_alg, self.en2_alg, self.en3_alg, TILE_SIZE, 2)
         g.init_sprites()
-        g.run(self.surface)
+        g.play_game(self.surface)
 
     def main_background(self):
         self.surface.fill(COLOR_BACKGROUND)
