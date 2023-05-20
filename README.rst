@@ -47,9 +47,10 @@ Q-learning based bot
 Train bot based on Q-learning:
 
 .. code:: sh
-python qlearning.py
 
-Model compile:
+    python qlearning.py
+
+Model compile
 
 .. code:: python
 
@@ -58,6 +59,7 @@ Model compile:
             discount=0.98, epsilon=0.1, de=0.01, gamma=0.9, n_past_states=10) -> None:
 
 Game settings
+
 You can change game settings during training 
 
 .. code:: python
@@ -65,7 +67,7 @@ You can change game settings during training
     def set_game(self, grid: np.ndarray, en1_alg: Algorithm, en2_alg: Algorithm, en3_alg: Algorithm,
             box_density: int | Tuple[int, int] = 5, shuffle_positions: bool = True, max_playing_time=120) -> None:
 
-#### Fit
+Fit
 
 .. code:: python
 
