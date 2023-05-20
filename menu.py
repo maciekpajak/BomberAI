@@ -1,7 +1,11 @@
+import os
+from pathlib import Path
+
+import numpy as np
 import pygame
 import pygame_menu
 
-from src import game
+from src.game import game
 from src.game import Algorithm
 
 COLOR_BACKGROUND = (153, 153, 255)
@@ -11,57 +15,82 @@ FPS = 60.0
 MENU_BACKGROUND_COLOR = (102, 102, 153)
 MENU_TITLE_COLOR = (51, 51, 255)
 WINDOW_SCALE = 0.90
-
-pygame.display.init()
-INFO = pygame.display.Info()
-TILE_SIZE = int(INFO.current_h * 0.05)
-WINDOW_SIZE = (13 * TILE_SIZE, 13 * TILE_SIZE)
-
-menu_theme = pygame_menu.Theme(
-    selection_color=COLOR_WHITE,
-    widget_font=pygame_menu.font.FONT_BEBAS,
-    title_font_size=TILE_SIZE,
-    title_font_color=COLOR_BLACK,
-    title_font=pygame_menu.font.FONT_BEBAS,
-    widget_font_color=COLOR_BLACK,
-    widget_font_size=int(TILE_SIZE * 0.7),
-    background_color=MENU_BACKGROUND_COLOR,
-    title_background_color=MENU_TITLE_COLOR,
-
-)
+WINDOW_SIZE = (500, 500)
 
 
 class Menu:
-    clock = None
-    player_alg = Algorithm.PLAYER
-    en1_alg = Algorithm.DIJKSTRA
-    en2_alg = Algorithm.DFS
-    en3_alg = Algorithm.DIJKSTRA
-    show_path = True
-    surface = pygame.display.set_mode(WINDOW_SIZE)
 
     def __init__(self):
-        return
 
-    def change_path(self, *args):
-        self.show_path = args[1]
+        pygame.display.init()
+        self.INFO = pygame.display.Info()
+        self.TILE_SIZE = int(self.INFO.current_h * 0.05)
 
-    def change_player(self, *args):
-        self.player_alg = args[1]
+        self.menu_theme = pygame_menu.Theme(
+            selection_color=COLOR_WHITE,
+            widget_font=pygame_menu.font.FONT_BEBAS,
+            title_font_size=self.TILE_SIZE,
+            title_font_color=COLOR_BLACK,
+            title_font=pygame_menu.font.FONT_BEBAS,
+            widget_font_color=COLOR_BLACK,
+            widget_font_size=int(self.TILE_SIZE * 0.7),
+            background_color=MENU_BACKGROUND_COLOR,
+            title_background_color=MENU_TITLE_COLOR,
 
-    def change_enemy1(self, *args):
-        self.en1_alg = args[1]
+        )
 
-    def change_enemy2(self, *args):
-        self.en2_alg = args[1]
+        self.clock = None
+        self.grid = np.genfromtxt('maps/standard/L.csv', delimiter=',')
+        self.player_alg = Algorithm.PLAYER
+        self.en1_alg = Algorithm.DFS
+        self.en2_alg = Algorithm.DFS
+        self.en3_alg = Algorithm.DFS
 
-    def change_enemy3(self, *args):
-        self.en3_alg = args[1]
+        self.show_path = False
+        self.shuffle_positions = False
+        self.box_density = 5
+        self.max_playing_time = 120
+
+        self.surface = pygame.display.set_mode(WINDOW_SIZE)
+
+    def change_player(self, name, alg):
+        self.player_alg = alg
+
+    def change_enemy1(self, name, alg):
+        self.en1_alg = alg
+
+    def change_enemy2(self, name, alg):
+        self.en2_alg = alg
+
+    def change_enemy3(self, name, alg):
+        self.en3_alg = alg
+
+    def change_map(self, name, path):
+        self.grid = np.genfromtxt(path, delimiter=',')
+
+    def change_box_density(self, density):
+        self.box_density = density
+
+    def change_shuffle(self, shuffle):
+        self.shuffle_positions = shuffle
+
+    def change_path(self, show):
+        self.show_path = show
 
     def run_game(self):
-        g = game.Game( self.show_path, self.player_alg, self.en1_alg, self.en2_alg, self.en3_alg, TILE_SIZE, 2)
+        g = game.Game(grid=self.grid,
+                      player_alg=self.player_alg,
+                      en1_alg=self.en1_alg,
+                      en2_alg=self.en2_alg,
+                      en3_alg=self.en3_alg,
+                      scale=WINDOW_SIZE[0] / len(self.grid),
+                      speed=1,
+                      show_path=self.show_path,
+                      box_density=self.box_density,
+                      shuffle_positions=self.shuffle_positions,
+                      max_playing_time=self.max_playing_time)
         g.init_sprites()
-        g.play_game(self.surface)
+        g.run(self.surface)
 
     def main_background(self):
         self.surface.fill(COLOR_BACKGROUND)
@@ -95,7 +124,7 @@ class Menu:
     def play_menu(self):
 
         play_menu = pygame_menu.Menu(
-            theme=menu_theme,
+            theme=self.menu_theme,
             height=int(WINDOW_SIZE[1] * WINDOW_SCALE),
             width=int(WINDOW_SIZE[0] * WINDOW_SCALE),
             title='Play menu'
@@ -109,25 +138,38 @@ class Menu:
 
     def play_options(self):
         play_options = pygame_menu.Menu(
-            theme=menu_theme,
+            theme=self.menu_theme,
             height=int(WINDOW_SIZE[1] * WINDOW_SCALE),
             width=int(WINDOW_SIZE[0] * WINDOW_SCALE),
             title='Options'
         )
-        play_options.add.selector("Character 1", [("Player", Algorithm.PLAYER),
-                                                  ("DFS", Algorithm.DFS),
-                                                  ("DIJKSTRA", Algorithm.DIJKSTRA), ("None", Algorithm.NONE)],
+        play_options.add.selector(title="Character 1",
+                                  items=[(alg.name, alg) for alg in Algorithm],
+                                  default=[alg for alg in Algorithm].index(Algorithm.PLAYER),
                                   onchange=self.change_player)
-        play_options.add.selector("Character 2", [("DIJKSTRA", Algorithm.DIJKSTRA),
-                                                  ("DFS", Algorithm.DFS),
-                                                  ("None", Algorithm.NONE)], onchange=self.change_enemy1)
-        play_options.add.selector("Character 3", [("DIJKSTRA", Algorithm.DIJKSTRA),
-                                                  ("DFS", Algorithm.DFS),
-                                                  ("None", Algorithm.NONE)], onchange=self.change_enemy2)
-        play_options.add.selector("Character 4", [("DIJKSTRA", Algorithm.DIJKSTRA),
-                                                  ("DFS", Algorithm.DFS),
-                                                  ("None", Algorithm.NONE)], onchange=self.change_enemy3)
-        play_options.add.selector("Show path", [("Yes", True), ("No", False)], onchange=self.change_path)
+        play_options.add.selector(title="Character 2",
+                                  items=[(alg.name, alg) for alg in Algorithm if alg != Algorithm.PLAYER],
+                                  default=[alg for alg in Algorithm].index(Algorithm.DFS),
+                                  onchange=self.change_enemy1)
+        play_options.add.selector(title="Character 3",
+                                  items=[(alg.name, alg) for alg in Algorithm if alg != Algorithm.PLAYER],
+                                  default=[alg for alg in Algorithm].index(Algorithm.DFS),
+                                  onchange=self.change_enemy2)
+        play_options.add.selector(title="Character 4",
+                                  items=[(alg.name, alg) for alg in Algorithm if alg != Algorithm.PLAYER],
+                                  default=[alg for alg in Algorithm].index(Algorithm.DFS),
+                                  onchange=self.change_enemy3)
+        play_options.add.selector(title="Map",
+                                  items=[(Path(root, name).with_suffix('').name, Path(root, name))
+                                         for root, dirs, files in os.walk("maps", topdown=False)
+                                         for name in files],
+                                  onchange=self.change_map)
+        play_options.add.range_slider("Box density",
+                                      range_values=[i + 1 for i in range(10)],
+                                      default=5,
+                                      onchange=self.change_box_density)
+        play_options.add.toggle_switch("Show path", default=0, onchange=self.change_path)
+        play_options.add.toggle_switch("Shuffle positions", default=0, onchange=self.change_shuffle)
 
         play_options.add.button('Back', pygame_menu.events.BACK)
 
@@ -136,7 +178,7 @@ class Menu:
     def main_menu(self):
 
         main_menu = pygame_menu.Menu(
-            theme=menu_theme,
+            theme=self.menu_theme,
             height=int(WINDOW_SIZE[1] * WINDOW_SCALE),
             width=int(WINDOW_SIZE[0] * WINDOW_SCALE),
             onclose=pygame_menu.events.EXIT,
@@ -153,11 +195,11 @@ class Menu:
         theme = pygame_menu.themes.Theme(
             selection_color=COLOR_WHITE,
             widget_font=pygame_menu.font.FONT_BEBAS,
-            title_font_size=TILE_SIZE,
+            title_font_size=self.TILE_SIZE,
             title_font_color=COLOR_BLACK,
             title_font=pygame_menu.font.FONT_BEBAS,
             widget_font_color=COLOR_BLACK,
-            widget_font_size=int(TILE_SIZE * 0.5),
+            widget_font_size=int(self.TILE_SIZE * 0.5),
             background_color=MENU_BACKGROUND_COLOR,
             title_background_color=MENU_TITLE_COLOR
         )

@@ -35,7 +35,6 @@ class Enemy(Agent):
             qtable_path = (Path('.') / 'src' / 'qtable' / 'qtable.csv').resolve()
             self.qtable = pd.read_csv(qtable_path,index_col=0)
             index_name = self.qtable.index.name
-            self.qtable = self.qtable.transpose().to_dict(orient='list')
             self.state_type, self.state_range, self.min_enemy_dist = index_name.split(sep='_')
             self.state_range = int(self.state_range)
             self.min_enemy_dist = int(self.min_enemy_dist)
@@ -197,7 +196,7 @@ class Enemy(Agent):
             action = np.random.choice(list(Action), 1, p=[0.23, 0.23, 0.23, 0.23, 0.0, 0.08])[0]
             print("[Q-Bot] I've never been here!")
         else:
-            action = Action(np.argmax(self.qtable[state]))
+            action = Action(np.argmax(self.qtable.loc[state]))
         self.movement_path.append(action)
         self.path = [[self.pos_x, self.pos_y]]
 
