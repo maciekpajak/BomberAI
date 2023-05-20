@@ -39,8 +39,7 @@ if __name__ == "__main__":
     gamma = 0.99
     n_past = 50
     epochs = 10
-    episodes = 10
-    training_speed = 100
+    episodes = 100
     model.compile(get_reward=get_reward,
                   learning_rate=lr,
                   discount=discount,
@@ -61,7 +60,6 @@ if __name__ == "__main__":
                    en1_alg=en1_alg,
                    en2_alg=en2_alg,
                    en3_alg=en3_alg,
-                   training_speed=training_speed,
                    box_density=(3, 6),
                    shuffle_positions=True,
                    max_playing_time=120)

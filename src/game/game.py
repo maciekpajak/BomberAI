@@ -40,7 +40,7 @@ class Game:
         self.scale: float = scale
         self.speed: float = speed
         self.playing_time = 0
-        self.max_playing_time = max_playing_time / speed
+        self.max_playing_time = max_playing_time
         self.min_enemy_dist = 10
         self.player = None
         self.shuffle_positions = shuffle_positions
@@ -231,8 +231,8 @@ class Game:
         self.power_ups.clear()
 
     def update_bombs(self, dt: float) -> Tuple[bool, int, int]:
-        sectors_cleared_by_player = None
-        player_killed_enemy = 0
+        destroyed_boxes = 0
+        player_kills = 0
         player_suicide = False
         for bomb in self.bombs:
             bomb.update(dt)
@@ -242,15 +242,15 @@ class Game:
                 self.grid[bomb.pos_x][bomb.pos_y] = Tile.GROUND
                 exp_temp = Explosion(bomb.pos_x, bomb.pos_y, bomb.range, self.speed)
                 exp_temp.explode(self.grid, self.bombs, bomb, self.power_ups)
-                sectors_cleared = exp_temp.clear_sectors(self.grid, self.power_ups)
+                db = exp_temp.clear_sectors(self.grid, self.power_ups)
                 self.explosions.append(exp_temp)
                 if bomb.bomber == self.player:
-                    sectors_cleared_by_player = sectors_cleared
+                    destroyed_boxes += db
         for agent in self.agents_on_board:
             bomber = agent.check_death(self.explosions)  # if no kill bomber is None
             if bomber:
                 if agent != self.player and bomber == self.player:
-                    player_killed_enemy += 1
+                    player_kills += 1
                 elif agent == self.player and bomber == self.player:
                     player_suicide = True
             # remove dead agents
@@ -261,7 +261,7 @@ class Game:
             explosion.update(dt)
             if explosion.time <= 0:
                 self.explosions.remove(explosion)
-        return player_suicide, player_killed_enemy, sectors_cleared_by_player
+        return player_suicide, player_kills, destroyed_boxes
 
     def check_end_game(self) -> bool:
         if self.playing_time > self.max_playing_time:

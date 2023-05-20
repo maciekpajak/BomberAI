@@ -50,7 +50,6 @@ class QModel:
                  en1_alg: Algorithm,
                  en2_alg: Algorithm,
                  en3_alg: Algorithm,
-                 training_speed: float = 1,
                  box_density: int | Tuple[int, int] = 5,
                  shuffle_positions: bool = True,
                  max_playing_time=120) -> None:
@@ -58,7 +57,6 @@ class QModel:
         self.en1_alg = en1_alg
         self.en2_alg = en2_alg
         self.en3_alg = en3_alg
-        self.training_speed = training_speed
         self.box_density = box_density
         self.shuffle_positions = shuffle_positions
         self.max_playing_time = max_playing_time
@@ -112,11 +110,13 @@ class QModel:
             SCALE = 500 / len(self.grid)
             surface = pygame.display.set_mode((500, 500))
             speed = 1
+            max_playing_time = self.max_playing_time
         else:
             clock = pygame.time.Clock()
             SCALE = 1
             surface = None
-            speed = self.training_speed
+            speed = 1
+            max_playing_time = 10
 
         game = Game(grid=self.grid,
                     player_alg=Algorithm.PLAYER,
@@ -128,7 +128,7 @@ class QModel:
                     show_path=False,
                     box_density=self.box_density,
                     shuffle_positions=self.shuffle_positions,
-                    max_playing_time=self.max_playing_time)
+                    max_playing_time=max_playing_time)
 
         if show:
             game.init_sprites()
@@ -139,7 +139,7 @@ class QModel:
             if show:
                 dt = clock.tick(15 * speed)
             else:
-                dt = 1000 / (15 * self.training_speed)
+                dt = 1000 / (15 * speed)
 
             state = game.get_state(agent=game.player,
                                    state_type=self.state_type,
