@@ -8,7 +8,7 @@ Bomberman game written in python using pygame.
 
 
 Setup
-========
+=====
 1. Create virtual env with your favourite tool
 2. Activate it
 3. To install required dependencies (based on your system) run
@@ -18,7 +18,7 @@ Setup
     python install.py
 
 Run
-========
+===
 
 Run GUI:
 
@@ -27,7 +27,7 @@ Run GUI:
     python menu.py
 
 Bots
-========
+====
 
 Random
 ------
@@ -36,17 +36,17 @@ This bot picks random path, drop the bomb
 and run away to the safe place.
 
 DFS bot
-------
+-------
 
 This bot picks shortest path to the destroyable object using DFS algorithm, drop the bomb
 and run away to the safe place.
 
 Q-learning based bot
-------
+--------------------
 This bot picks the best move based on the Q table
 
 Deep Q-learning based bot
-------
+-------------------------
 This bot picks the best move using neural network
 
 
@@ -54,7 +54,7 @@ Training bots
 =============
 
 Q-learning
-------
+----------
 
 1. Write reward function
 
@@ -67,7 +67,8 @@ Q-learning
 
 Parameters
 
-~~~~~~~~~~~~
+~~~~~~~~~~
+
 * player_alive: bool
     True if the bot is alive, otherwise False
 * action: Action
@@ -87,13 +88,20 @@ Parameters
 
     model = Model()
 
-3. Load Qtable (optional)
+3. Load Qtable (optional) - use to finetune model or continue training from save
 
 .. code:: python
 
     model.load(path: str)
 
-3. Compile model
+Parameters
+
+~~~~~~~~~~~~
+
+* path: str
+    Path to file with qtable
+
+4. Compile model
 
 .. code:: python
 
@@ -105,6 +113,7 @@ Parameters
 Parameters
 
 ~~~~~~~~~~~~
+
 - get_reward: Callable
     reward function
 - state_type: str
@@ -129,7 +138,7 @@ Parameters
     How many past states to update
 
 
-4. Set game
+5. Set game
 
 .. code:: python
 
@@ -139,6 +148,7 @@ Parameters
 Parameters
 
 ~~~~~~~~~~~~
+
 * grid: np.ndarray[int]
     A map of the maze for players - ground = 0, unbreakable wall = 1,
 * en1_alg: Algorithm
@@ -155,7 +165,7 @@ Parameters
     Maximum time for gameplay
 
 
-5. Fit
+6. Fit
 
 .. code:: python
 
@@ -166,6 +176,7 @@ Parameters
 Parameters
 
 ~~~~~~~~~~~~
+
 - epochs: int = 10
     The number of epochs to train the model.
 - episodes: int = 1000
@@ -181,7 +192,7 @@ Parameters
 
 
 Deep-Q network based bot
-------
+------------------------
 
 In progress...
  
