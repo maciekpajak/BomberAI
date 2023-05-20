@@ -69,7 +69,7 @@ class QModel:
             log_file: str = 'log.csv') -> pd.DataFrame:
         cols = ['epoch', 'epsilon', 'states_viewed', 'avg_sum_of_rewards', 'win_rate']
         history = pd.DataFrame(columns=cols)
-        history.to_csv(log_file, mode='w', index=False, header=cols)
+        history.to_csv(log_file, mode='a', index=False, header=cols)
 
         epsilon = self.epsilon
 
