@@ -1,5 +1,4 @@
 import time
-from pathlib import Path
 from typing import Callable, Tuple
 
 import pygame
@@ -68,7 +67,7 @@ class QModel:
             show_game: bool = False,
             path_to_save: str = 'qtable.csv',
             log_file: str = 'log.csv') -> pd.DataFrame:
-        cols = ['epoch', 'epsilon', 'states_viewed', 'average_sum_of_rewards', 'win_rate']
+        cols = ['epoch', 'epsilon', 'states_viewed', 'avg_sum_of_rewards', 'win_rate']
         history = pd.DataFrame(columns=cols)
         history.to_csv(log_file, mode='w', index=False, header=cols)
 
@@ -86,13 +85,14 @@ class QModel:
             win_rate = self.win_rate(100)
 
             mean_reward = np.mean(epoch_rewards)
-            epsilon = max(0.0, epsilon - self.de)
 
             print(f'epsilon: {epsilon:5.5f} - viewed states:{len(self.qtable):5} - avg_sum_of_rewards:{mean_reward:5.1f} - win_rate:{win_rate:2.2f}')
 
             self.save(path_to_save)
             history = pd.DataFrame([[epoch, epsilon, len(self.qtable), mean_reward, win_rate]], columns=cols)
             history.to_csv(log_file, mode='a', index=False, header=False)
+
+            epsilon = max(0.0, epsilon - self.de)
 
         return history
 
@@ -150,14 +150,14 @@ class QModel:
                     self.qtable[state] = np.round(np.random.uniform(0, 0, 6), 3)
 
                 if np.random.random() < epsilon:
-                    action = np.random.choice(list(Action), 1, p=[0.2, 0.2, 0.2, 0.2, 0.0, 0.2])[0].value
+                    action = np.random.choice(list(Action), 1, p=[0.17, 0.17, 0.17, 0.17, 0.15, 0.17])[0].value
                 else:
                     action = np.argmax(self.qtable[state])
 
                 past_states.insert(0, (state, action))
             else:
                 if state not in self.qtable:
-                    action = np.random.choice(list(Action), 1, p=[0.2, 0.2, 0.2, 0.2, 0.0, 0.2])[0].value
+                    action = np.random.choice(list(Action), 1, p=[0.17, 0.17, 0.17, 0.17, 0.15, 0.17])[0].value
                 else:
                     action = np.argmax(self.qtable[state])
 
