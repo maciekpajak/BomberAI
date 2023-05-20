@@ -57,6 +57,7 @@ Q-learning
 ----------
 
 1. Write reward function
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: python
 
@@ -66,8 +67,6 @@ Q-learning
         return reward
 
 Parameters
-
-~~~~~~~~~~
 
 * player_alive: bool
     True if the bot is alive, otherwise False
@@ -83,12 +82,14 @@ Parameters
     How many boxes the bot's bombs destroyed in given moment
 
 2. Init model
+~~~~~~~~~~~~~
 
 .. code:: python
 
     model = Model()
 
 3. Load Qtable (optional) - use to finetune model or continue training from save
+~~~~~~~~~~~~~~~~
 
 .. code:: python
 
@@ -96,12 +97,11 @@ Parameters
 
 Parameters
 
-~~~~~~~~~~~~
-
 * path: str
     Path to file with qtable
 
 4. Compile model
+~~~~~~~~~~~~~~~~
 
 .. code:: python
 
@@ -111,8 +111,6 @@ Parameters
 
 
 Parameters
-
-~~~~~~~~~~~~
 
 - get_reward: Callable
     reward function
@@ -131,7 +129,7 @@ Parameters
 - de : float
     Parameter to decreasing epsilon at the end of the epoch
 - gamma : float
-    Factor to update past states `(gamma ^ t[i]) * reward`,
+    Factor to update past states ``(gamma ^ t[i]) * reward``,
     where i in [0..n_past_states]. The earlier the state,
     the less it improves.
 - n_past_states: int
@@ -139,6 +137,7 @@ Parameters
 
 
 5. Set game
+~~~~~~~~~~~
 
 .. code:: python
 
@@ -147,10 +146,8 @@ Parameters
                     shuffle_positions: bool = True, max_playing_time=120)
 Parameters
 
-~~~~~~~~~~~~
-
 * grid: np.ndarray[int]
-    A map of the maze for players - ground = 0, unbreakable wall = 1,
+    A map of the maze for players. Ground = 0, unbreakable wall = 1,
 * en1_alg: Algorithm
     Algorithm of the first enemy
 * en2_alg: Algorithm
@@ -166,6 +163,7 @@ Parameters
 
 
 6. Fit
+~~~~~~
 
 .. code:: python
 
@@ -174,8 +172,6 @@ Parameters
                 log_file: str = 'log.csv')
 
 Parameters
-
-~~~~~~~~~~~~
 
 - epochs: int = 10
     The number of epochs to train the model.
