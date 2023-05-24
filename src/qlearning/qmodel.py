@@ -138,6 +138,7 @@ class QModel:
         while not game_over:
             if show:
                 dt = clock.tick(15 * speed)
+                pygame.event.get()
             else:
                 dt = 1000 / (15 * speed)
 
