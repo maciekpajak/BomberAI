@@ -305,7 +305,8 @@ class Game:
                   agent: Agent,
                   state_type: str,
                   state_range: int,
-                  min_enemy_dist: int) -> str:
+                  min_enemy_dist: int,
+                  if_dqm: bool = False) -> str:
 
         x, y = agent.pos_x, agent.pos_y
         if state_type == 'full':
@@ -332,25 +333,45 @@ class Game:
             raise ValueError(" State must be one of: full, cross, square or circle")
 
         tmp_grid = self.create_state_grid(self.grid, self.agents_on_board, self.bombs, self.explosions, self.power_ups)
-        surrounding_state = ''
-        for tile in tiles:
-            if tile[0] < 0 or tile[0] >= len(self.grid) or tile[1] < 0 or tile[1] >= len(self.grid):
-                surrounding_state += str(Tile.SOLID.value)
-            else:
-                surrounding_state += str(tmp_grid[tile[0]][tile[1]].value)
+        if not if_dqm:
+            surrounding_state = ''
+            for tile in tiles:
+                if tile[0] < 0 or tile[0] >= len(self.grid) or tile[1] < 0 or tile[1] >= len(self.grid):
+                    surrounding_state += str(Tile.SOLID.value)
+                else:
+                    surrounding_state += str(tmp_grid[tile[0]][tile[1]].value)
 
-        dist_y, dist_x = 0, 0
-        for enemy in self.agents_on_board:
-            if enemy == agent:
-                continue
-            dist = abs(enemy.pos_y - y) + abs(enemy.pos_x - x)  # manhattan dist
-            if dist < min_enemy_dist:
-                min_enemy_dist = dist
-                dist_y = enemy.pos_y - y
-                dist_x = enemy.pos_x - x
-        closest_enemy_state = f'{dist_x:+03}{dist_y:+03}'
+            dist_y, dist_x = 0, 0
+            for enemy in self.agents_on_board:
+                if enemy == agent:
+                    continue
+                dist = abs(enemy.pos_y - y) + abs(enemy.pos_x - x)  # manhattan dist
+                if dist < min_enemy_dist:
+                    min_enemy_dist = dist
+                    dist_y = enemy.pos_y - y
+                    dist_x = enemy.pos_x - x
+            closest_enemy_state = f'{dist_x:+03}{dist_y:+03}'
 
-        state = surrounding_state + closest_enemy_state
+            state = surrounding_state + closest_enemy_state
+        else:
+            state = []
+            for tile in tiles:
+                if tile[0] < 0 or tile[0] >= len(self.grid) or tile[1] < 0 or tile[1] >= len(self.grid):
+                    state.append(Tile.SOLID.value)
+                else:
+                    state.append(tmp_grid[tile[0]][tile[1]].value)
+
+            dist_y, dist_x = 0, 0
+            for enemy in self.agents_on_board:
+                if enemy == agent:
+                    continue
+                dist = abs(enemy.pos_y - y) + abs(enemy.pos_x - x)  # manhattan dist
+                if dist < min_enemy_dist:
+                    min_enemy_dist = dist
+                    dist_y = enemy.pos_y - y
+                    dist_x = enemy.pos_x - x
+            state.append(dist_x)
+            state.append(dist_y)
         return state
 
     @staticmethod
