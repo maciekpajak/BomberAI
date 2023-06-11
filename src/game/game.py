@@ -353,6 +353,32 @@ class Game:
         state = surrounding_state + closest_enemy_state
         return state
 
+    def get_full_state_as_list(self, agent: Agent):
+        x, y = agent.pos_x, agent.pos_y
+        tiles = [[xx, yy] for xx in range(self.grid_w) for yy in range(self.grid_h)]
+        tmp_grid = self.create_state_grid(self.grid, self.agents_on_board, self.bombs, self.explosions, self.power_ups)
+        state = []
+        for tile in tiles:
+            state.append(tmp_grid[tile[0]][tile[1]].value)
+
+
+        for tile in tiles:
+            tile_occupied = False
+            its_me = True
+            for enemy in self.agents_on_board:
+                if enemy.pos_y == tile[0] and enemy.pos_x == tile[1]:
+                    tile_occupied = True
+                    if enemy == agent:
+                        continue
+            if tile_occupied:
+                if its_me:
+                    state.append(2)
+                else:
+                    state.append(1)
+            else:
+                state.append(0)
+        return np.array(state).astype('float')
+
     @staticmethod
     def create_state_grid(grid: np.ndarray[Tile],
                           agents: list[Agent],
