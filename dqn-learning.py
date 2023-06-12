@@ -11,37 +11,24 @@ from src.qlearning.dqnmodel import DQNModel
 
 
 def get_reward(player_alive, action, is_move_possible, suicide, kills, destroyed_boxes):
-    r = -0.1
+    r = -1/23
     if action == Action.NO_ACTION:
-        r -= 3
-    if not is_move_possible:
-        r -= 5
+        r += -1/23
     if not player_alive and not suicide:
-        r -= 50
-    if not player_alive and suicide:
         r -= 100
-    r += kills * 200
-    r += destroyed_boxes * 10
+    if not player_alive and suicide:
+        r -= 500
+    r += kills * 300
+    r += destroyed_boxes * 50
     return r
 
 
 if __name__ == "__main__":
     model = DQNModel()
-    epsilon = 0.1
-    de = 0.01
     discount = 0.98
-    lr = 0.1
-    gamma = 0.99
-    n_past = 50
-    epochs = 10
-    episodes = 10
+    episodes = 1000
     model.compile(get_reward=get_reward,
-                  discount=discount,
-                  epsilon=epsilon,
-                  de=de,
-                  state_type='full',
-                  state_range=3,
-                  min_enemy_dist=10)
+                  discount=discount)
 
     grid_path = Path('.') / 'maps' / 'standard' / 'M.csv'
     grid = np.genfromtxt(grid_path, delimiter=',')
@@ -56,11 +43,9 @@ if __name__ == "__main__":
                    shuffle_positions=True,
                    max_playing_time=120)
 
-    history = model.fit(epochs=epochs,
-                        episodes=episodes,
-                        start_epoch=0,
+    history = model.fit(episodes=episodes,
                         show_game=True,
-                        update_every=100,
-                        batch_size=4,
+                        update_target_every=1000,
+                        batch_size=128,
                         path_to_save='qtables/dqnmodels/modelM.h5',
                         log_file='qtables/dqnmodels/log.csv')
