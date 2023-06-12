@@ -353,15 +353,17 @@ class Game:
         state = surrounding_state + closest_enemy_state
         return state
 
-    def get_full_state_as_list(self, agent: Agent):
+    def get_full_state_for_dqn(self, agent: Agent):
         x, y = agent.pos_x, agent.pos_y
         tiles = [[xx, yy] for xx in range(self.grid_w) for yy in range(self.grid_h)]
         tmp_grid = self.create_state_grid(self.grid, self.agents_on_board, self.bombs, self.explosions, self.power_ups)
         state = []
+
+        objects_grid = np.empty_like(tmp_grid, dtype=float)
         for tile in tiles:
-            state.append(tmp_grid[tile[0]][tile[1]].value)
+            objects_grid[tile[0]][tile[1]] = tmp_grid[tile[0]][tile[1]].value
 
-
+        agents_grid = np.zeros_like(tmp_grid, dtype=float)
         for tile in tiles:
             tile_occupied = False
             its_me = True
@@ -372,11 +374,11 @@ class Game:
                         continue
             if tile_occupied:
                 if its_me:
-                    state.append(2)
+                    agents_grid[tile[0]][tile[1]] = 2
                 else:
-                    state.append(1)
-            else:
-                state.append(0)
+                    agents_grid[tile[0]][tile[1]] = 1
+
+        state = np.stack([objects_grid, agents_grid],axis=2)
         return np.array(state).astype('float')
 
     @staticmethod
