@@ -215,7 +215,13 @@ class Game:
                                        state_type=enemy.state_type,
                                        state_range=enemy.state_range,
                                        min_enemy_dist=enemy.min_enemy_dist) if enemy.algorithm == Algorithm.Q else None
-                enemy.choose_move(self.grid, self.bombs, self.explosions, self.agents_on_board, self.power_ups, state)
+                enemy.choose_move(self.grid,
+                                  self.bombs,
+                                  self.explosions,
+                                  self.agents_on_board,
+                                  self.power_ups,
+                                  state,
+                                  surface)
 
             self.update_bombs(dt)
 

@@ -28,7 +28,8 @@ class Agent:
                     explosions: list[Explosion],
                     agents: list,
                     power_ups: list[PowerUp],
-                    state: str):
+                    state: str,
+                    surface):
         raise NotImplementedError
 
     def move(self, action: Action,
@@ -56,7 +57,9 @@ class Agent:
                 bomb = self.plant_bomb(grid)
                 bombs.append(bomb)
                 grid[bomb.pos_x][bomb.pos_y] = Tile.BOMB
-            return True
+                return True
+            else:
+                return False
 
         # prevent passing through enemies
         for enemy in enemies:

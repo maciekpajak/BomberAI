@@ -1,3 +1,4 @@
+from collections import deque
 from enum import Enum
 from pathlib import Path
 
@@ -5,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pygame
 import random
+import tensorflow as tf
 
 from src.game.explosion import Explosion
 from src.game.power_up import PowerUp
@@ -39,13 +41,20 @@ class Enemy(Agent):
             self.state_range = int(self.state_range)
             self.min_enemy_dist = int(self.min_enemy_dist)
 
+        if self.algorithm == Algorithm.DQN:
+            self.observations = deque(maxlen=4)
+            for _ in range(4):
+                self.observations.append(np.zeros((500,500,3)))
+            self.dqn_model = tf.keras.models.load_model((Path('.') / 'src' / 'qtable' / 'dqn_model.h5').resolve())
+
     def choose_move(self,
                     grid: np.ndarray[Tile],
                     bombs: list[Bomb],
                     explosions: list[Explosion],
                     agents: list[Agent],
                     power_ups: list[PowerUp],
-                    state: str):
+                    state: str,
+                    surface):
 
         if not self.alive:
             return
@@ -56,6 +65,8 @@ class Enemy(Agent):
                 raise NotImplementedError
             elif self.algorithm == Algorithm.Q:
                 self.q_path(state)
+            elif self.algorithm == Algorithm.DQN:
+                self.dqn(surface)
             elif self.algorithm == Algorithm.RANDOM:
                 self.random(self.create_grid(grid, bombs, explosions, agents))
             else:
@@ -197,6 +208,13 @@ class Enemy(Agent):
             print("[Q-Bot] I've never been here!")
         else:
             action = Action(np.argmax(self.qtable.loc[state]))
+        self.movement_path.append(action)
+        self.path = [[self.pos_x, self.pos_y]]
+    def dqn(self, surface):
+        state = pygame.surfarray.array3d(surface)
+        self.observations.append(state)
+        history_state = np.concatenate([o for o in self.observations], axis=2)
+        action = np.argmax(self.dqn_model.predict(np.expand_dims(history_state, axis=0), verbose=0))
         self.movement_path.append(action)
         self.path = [[self.pos_x, self.pos_y]]
 
