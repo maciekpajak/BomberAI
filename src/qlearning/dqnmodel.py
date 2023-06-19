@@ -144,8 +144,8 @@ class DQNModel:
         accuracy_list = []
         past_rewards= 23
 
+        pygame.init()
         if show:
-            pygame.init()
             pygame.display.init()
             clock = pygame.time.Clock()
             SCALE = 500 / len(self.grid)
@@ -157,7 +157,8 @@ class DQNModel:
             SCALE = 1
             surface = None
             speed = 1
-            max_playing_time = 10
+            max_playing_time = 100
+            surface = pygame.Surface(size=(500, 500))
 
         game = Game(grid=self.grid,
                     player_alg=Algorithm.PLAYER,
@@ -171,8 +172,11 @@ class DQNModel:
                     shuffle_positions=self.shuffle_positions,
                     max_playing_time=max_playing_time)
 
-        if show:
-            game.init_sprites()
+        game.init_sprites()
+        game.draw(surface)
+
+        state = pygame.surfarray.array3d(surface)
+        observations.append(state)
 
         game_over = False
         start_time = time.time()
@@ -218,6 +222,8 @@ class DQNModel:
 
             # update bombs
             suicide, kills, destroyed_boxes = game.update_bombs(dt)
+            game.draw(surface)
+            observations.append(pygame.surfarray.array3d(surface))
 
             # ----------------------------------------
             if train:
@@ -248,7 +254,7 @@ class DQNModel:
 
             # ----------------------------------------
             if show:
-                game.draw(surface)
+                pygame.display.update()
 
             if not game_over:
                 game.playing_time = time.time() - start_time

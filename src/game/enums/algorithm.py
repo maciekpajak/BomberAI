@@ -10,3 +10,4 @@ class Algorithm(Enum):
     RANDOM = 4
     Q = 5
     WANDER = 6
+    DQN = 7

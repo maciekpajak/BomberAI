@@ -163,6 +163,13 @@ class Game:
                             pygame.draw.rect(surface, (255, 0, 255, 240),
                                              [sek[0] * self.scale, sek[1] * self.scale, self.scale, self.scale], 1)
 
+
+        if self.player is not None:
+            font = pygame.font.SysFont('Bebas', int(self.scale / 2))
+            tf = font.render(f"bomb limit:{self.player.bomb_limit:2} range: {self.player.bomb_range:2}", False, (153, 153, 255))
+            w, h = surface.get_width(), surface.get_height(),
+            surface.blit(tf, (w-200, h-20))
+
         if not self.game_ended:
             font = pygame.font.SysFont('Bebas', int(self.scale))
             time_left = self.max_playing_time - self.playing_time
@@ -174,7 +181,6 @@ class Game:
             tf = font.render("Press ESC to go back to menu", False, (153, 153, 255))
             surface.blit(tf, (10, 10))
 
-        pygame.display.update()
 
     def run(self, surface: pygame.Surface | pygame.SurfaceType):
         clock = pygame.time.Clock()
@@ -226,6 +232,7 @@ class Game:
             self.update_bombs(dt)
 
             self.draw(surface)
+            pygame.display.update()
 
             if not self.game_ended:
                 self.playing_time = time.time() - start_time
