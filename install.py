@@ -8,7 +8,9 @@ common = [
     'python-decouple',
     'numpy',
     'pandas',
-    'tqdm'
+    'tqdm',
+    'simple-chalk',
+    'tensorflow'
 ]
 
 windows = [
