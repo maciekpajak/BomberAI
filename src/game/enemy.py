@@ -33,7 +33,7 @@ class Enemy(Agent):
         self.algorithm = alg
         if self.algorithm == Algorithm.Q:
             qtable_path = (Path('.') / 'src' / 'qtable' / 'qtable.csv').resolve()
-            self.qtable = pd.read_csv('/home/warzkos/projects/BomberAI/qtables/tests/qtable.csv',index_col=0)
+            self.qtable = pd.read_csv(qtable_path,index_col=0)
             index_name = self.qtable.index.name
             self.state_type, self.state_range, self.min_enemy_dist = index_name.split(sep='_')
             self.state_range = int(self.state_range)
