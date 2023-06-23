@@ -19,22 +19,22 @@ def get_reward(player_alive, action, is_move_possible, suicide, kills, destroyed
     if not player_alive and not suicide:
         r -= 50
     if not player_alive and suicide:
-        r -= 100
-    r += kills * 200
-    r += destroyed_boxes * 10
+        r -= 200
+    r += kills * 1000
+    r += destroyed_boxes * 300
     return r
 
 
 if __name__ == "__main__":
     model = QModel()
-    epsilon = 0.1
+    epsilon = 0.5
     de = 0.01
     discount = 0.98
-    lr = 0.1
+    lr = 0.15
     gamma = 0.99
-    n_past = 50
-    epochs = 10
-    episodes = 100
+    n_past = 250
+    epochs = 50
+    episodes = 500
     model.compile(get_reward=get_reward,
                   learning_rate=lr,
                   discount=discount,
@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     grid_path = Path('.') / 'maps' / 'standard' / 'M.csv'
     grid = np.genfromtxt(grid_path, delimiter=',')
-    en1_alg = Algorithm.WANDER
+    en1_alg = Algorithm.DFS
     en2_alg = Algorithm.WANDER
     en3_alg = Algorithm.RANDOM
     model.set_game(grid=grid,
@@ -62,6 +62,6 @@ if __name__ == "__main__":
     history = model.fit(epochs=epochs,
                         episodes=episodes,
                         start_epoch=0,
-                        show_game=True,
-                        path_to_save='qtables/tests/qtable.csv',
-                        log_file='qtables/tests/log.csv')
+                        show_game=False,
+                        path_to_save='src/qtable/qtable.csv',
+                        log_file='src/qtable/log.csv')
